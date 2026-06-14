@@ -24,7 +24,7 @@ export function LoginForm() {
     const supabase = createBrowserClient(url, key);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     setPending(false);
     setMessage(error ? error.message : "ログインリンクを送信しました");
