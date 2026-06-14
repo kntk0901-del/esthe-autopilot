@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Esthe Ops AI - 売上報告AI取込・分析システム</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f5f6fa;--card:#ffffff;--line:#e4e7ef;--tx:#1a2233;--sub:#6b7488;
+  --ac:#2563eb;--ac-bg:#eff4ff;--gn:#16a34a;--gn-bg:#ecfdf3;--am:#d97706;--am-bg:#fffbeb;
+  --rd:#dc2626;--rd-bg:#fef2f2;--vio:#7c3aed;--vio-bg:#f5f3ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN","Hiragino Sans",Meiryo,sans-serif;background:var(--bg);color:var(--tx);font-size:14px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 18px 60px}
+header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+.hd{max-width:1280px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{font-size:17px;font-weight:700}
+.logo span{color:var(--ac)}
+.hd .meta{font-size:11px;color:var(--sub)}
+nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav button{padding:8px 14px;border:none;background:none;border-radius:8px;cursor:pointer;font-size:13px;color:var(--sub);font-weight:600;position:relative}
+nav button.on{background:var(--ac-bg);color:var(--ac)}
+nav button .bdg{position:absolute;top:0;right:0;background:var(--rd);color:#fff;border-radius:9px;font-size:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;display:none}
+h2{font-size:16px;margin:22px 0 4px}
+h3{font-size:13.5px;margin-bottom:10px}
+.desc{font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.7}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px;font-family:inherit;resize:vertical;background:#fcfcfe;color:var(--tx)}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--ac);outline-offset:-1px}
+input,select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;background:#fff;color:var(--tx);font-family:inherit}
+button.btn{padding:9px 18px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--tx);font-size:13px;font-weight:600;cursor:pointer}
+button.btn:hover{background:#f4f6fb}
+button.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+button.btn.pri:hover{background:#1d4fd8}
+button.btn.grn{background:var(--gn);border-color:var(--gn);color:#fff}
+button.btn.vio{background:var(--vio);border-color:var(--vio);color:#fff}
+button.btn.dng{background:#fff;border-color:var(--rd);color:var(--rd)}
+button.btn.sm{padding:5px 10px;font-size:12px;border-radius:7px}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600}
+.tag.bl{background:var(--ac-bg);color:var(--ac)}
+.tag.gn{background:var(--gn-bg);color:var(--gn)}
+.tag.am{background:var(--am-bg);color:var(--am)}
+.tag.rd{background:var(--rd-bg);color:var(--rd)}
+.tag.gy{background:#f1f3f8;color:var(--sub)}
+.tag.vi{background:var(--vio-bg);color:var(--vio)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{color:var(--sub);font-weight:600;font-size:11px;background:#fafbfd;white-space:nowrap}
+tr:hover td{background:#fafbff}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.tbl-wrap table{font-size:12px}
+.tbl-wrap th,.tbl-wrap td{white-space:nowrap}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin:14px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.kpi .l{font-size:11px;color:var(--sub);font-weight:600}
+.kpi .v{font-size:21px;font-weight:700;margin-top:3px;letter-spacing:-.3px}
+.kpi .d{font-size:11px;color:var(--sub);margin-top:3px}
+.kpi .d b.up{color:var(--gn)}.kpi .d b.dn{color:var(--rd)}
+.chartbox{position:relative;height:260px}
+.conf{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.conf .bar{width:46px;height:6px;background:#eceef4;border-radius:4px;overflow:hidden}
+.conf .bar i{display:block;height:100%;border-radius:4px}
+.qcard{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:#fff}
+.qcard .raw{background:#f6f8fc;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12.5px;white-space:pre-wrap;margin:8px 0;color:#3a4358}
+.qcard .issues{background:var(--am-bg);border-radius:8px;padding:9px 12px;font-size:12px;color:#92400e;margin:8px 0;line-height:1.7}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:8px 0}
+.fgrid label{font-size:10.5px;color:var(--sub);font-weight:600;display:block;margin-bottom:3px}
+.fgrid input,.fgrid select{width:100%;padding:6px 8px;font-size:12.5px}
+.empty{text-align:center;color:var(--sub);padding:40px 10px;font-size:13px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2233;color:#fff;padding:11px 22px;border-radius:10px;font-size:13px;z-index:99;display:none;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.steps{display:flex;gap:0;flex-wrap:wrap;margin:10px 0 16px;font-size:11.5px;color:var(--sub)}
+.steps span{background:#fff;border:1px solid var(--line);padding:5px 12px;border-radius:99px;margin-right:6px;margin-bottom:6px}
+.steps b{color:var(--ac)}
+.md{line-height:1.85;font-size:13.5px}
+.md h1,.md h2,.md h3{margin:16px 0 8px;font-size:15px}
+.md h1{font-size:17px}.md h3{font-size:14px}
+.md ul,.md ol{margin:6px 0 6px 22px}
+.md table{margin:10px 0}
+.md code{background:#f1f3f8;padding:1px 6px;border-radius:5px;font-size:12px}
+.md strong{color:#111c33}
+.alertbox{border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start;line-height:1.6}
+.alertbox.am{background:var(--am-bg);color:#92400e}
+.alertbox.rd{background:var(--rd-bg);color:#991b1b}
+.alertbox.gn{background:var(--gn-bg);color:#14532d}
+.subtabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.subtabs button{padding:6px 14px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--sub);font-size:12.5px;cursor:pointer;font-weight:600}
+.subtabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.filterbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filterbar label{font-size:11px;color:var(--sub);font-weight:600}
+details.rawd summary{cursor:pointer;font-size:11px;color:var(--ac)}
+details.rawd pre{white-space:pre-wrap;background:#f6f8fc;border-radius:6px;padding:8px;font-size:11.5px;margin-top:5px;font-family:inherit}
+.mst-add{margin-top:8px}
+.help{font-size:11.5px;color:var(--sub);line-height:1.8;background:#f8f9fc;border-radius:8px;padding:10px 13px;margin-top:10px}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:80;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
+.modal{background:#fff;border-radius:14px;max-width:760px;width:100%;padding:20px}
+section.tab{display:none}
+section.tab.on{display:block}
+</style>
+</head>
+<body>
+<header><div class="hd">
+  <div class="logo">Esthe Ops <span>AI</span></div>
+  <div class="meta">LINE売上報告 AI取込・分析システム / ザ・リッツ蒲田・スパラウンジ大井町・巣鴨</div>
+  <nav id="nav">
+    <button data-t="ingest" class="on">📥 取込</button>
+    <button data-t="queue">✅ 確認キュー<span class="bdg" id="bdgQueue"></span></button>
+    <button data-t="db">🗄 データベース</button>
+    <button data-t="dash">📊 ダッシュボード</button>
+    <button data-t="ai">🤖 AI分析</button>
+    <button data-t="master">⚙ マスタ設定</button>
+  </nav>
+</div></header>
+
+<div class="wrap">
+
+<!-- ========== 取込 ========== -->
+<section class="tab on" id="tab-ingest">
+  <h2>LINE報告の取込</h2>
+  <div class="steps"><span><b>1</b> LINE原文を貼付</span><span><b>2</b> 解析(内蔵エンジン or AIプロンプト)</span><span><b>3</b> 高信頼は自動取込</span><span><b>4</b> 曖昧なものだけ確認キューへ</span></div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>① LINE原文を貼り付け</h3>
+      <div class="desc">フォーマット不要。複数日・複数件まとめてOK。原文はRawログに必ず保存されます。</div>
+      <textarea id="rawInput" rows="9" placeholder="例:
+蒲田 6/12
+りな 19:00〜120分 指名 リピ様
+売上18000 取り10000 LINE予約
+
+今日大井町
+まゆさんリピ2本 90と120 合計31000"></textarea>
+      <div class="row" style="margin-top:10px">
+        <select id="reporter"><option>店長</option><option>受付</option><option>セラピスト</option><option selected>管理者</option></select>
+        <input type="date" id="recvDate">
+        <button class="btn pri" onclick="runLocalParse()">⚡ 内蔵エンジンで解析</button>
+        <button class="btn sm" onclick="loadSample()">サンプル投入</button>
+      </div>
+      <div class="help"><b>2つの解析ルート</b><br>
+      ⚡ <b>内蔵エンジン</b>: その場で即解析。きれいな報告向け。<br>
+      🤖 <b>AIプロンプト</b>: 右の「プロンプト生成」でコピー → Claudeに貼る → 返ってきたJSONを下の欄に貼付。曖昧・複雑な報告向けで高精度。</div>
+    </div>
+    <div class="panel">
+      <h3>② AI(Claude)で構造化する場合</h3>
+      <div class="desc">マスタ情報・抽出ルールを埋め込んだプロンプトを生成します。Claudeの回答(JSON)を下に貼って取込。</div>
+      <div class="row">
+        <button class="btn vio" onclick="genExtractPrompt()">🤖 抽出プロンプト生成&コピー</button>
+        <span id="genMsg" style="font-size:12px;color:var(--gn)"></span>
+      </div>
+      <textarea id="aiJson" rows="7" style="margin-top:10px" placeholder='Claudeが返したJSONをここに貼り付け ( {"reservations":[...]} 形式 )'></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn pri" onclick="importAiJson()">⬇ AI結果を取込</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>③ Excel / CSV 取込 (フォーマット不定でもOK)</h3>
+    <div class="desc">月次売上表・日報・個人別売上など、列構成がブレていても取込可能。①ヘッダ自動判別の内蔵マッピング ②シート内容を埋め込んだAIプロンプト生成 の2ルート。</div>
+    <div class="row">
+      <input type="file" id="xlFile" accept=".xlsx,.xlsm,.xls,.csv" onchange="handleXlsx(this)">
+      <select id="xlSheet" onchange="previewSheet()" style="display:none"></select>
+      <select id="xlStore" title="店舗列が無い場合に適用"><option value="">店舗列が無い場合の既定店舗...</option></select>
+    </div>
+    <div id="xlMonthly" style="display:none;margin-top:10px">
+      <div class="alertbox gn" id="xlMonthlyInfo"></div>
+      <button class="btn grn" onclick="importMonthly()">📘 月次売上表として一括取込 (全店舗)</button>
+    </div>
+    <div id="xlPreview" style="margin-top:10px"></div>
+    <div class="row" id="xlActions" style="display:none;margin-top:10px">
+      <button class="btn pri" onclick="excelLocalImport()">⚡ 内蔵マッピングで取込</button>
+      <button class="btn vio" onclick="genExcelPrompt()">🤖 AIプロンプト生成&コピー</button>
+      <span id="genMsg3" style="font-size:12px;color:var(--gn)"></span>
+    </div>
+    <div class="help">内蔵マッピングはヘッダ行(日付/店舗/セラピスト/コース/売上 等)を自動検出して列を対応付けます。検出できない・崩れている表はAIプロンプトルートを使ってください。取込後は通常どおり検証され、曖昧な行だけ確認キューに入ります。</div>
+  </div>
+  <div class="panel" id="parseResultPanel" style="display:none">
+    <h3>解析結果</h3>
+    <div id="parseResult"></div>
+  </div>
+  <div class="panel">
+    <h3>手入力 (1件ずつ直接登録)</h3>
+    <div class="fgrid" id="manualForm"></div>
+    <button class="btn grn" onclick="manualAdd()">＋ 直接登録</button>
+  </div>
+</section>
+
+<!-- ========== 確認キュー ========== -->
+<section class="tab" id="tab-queue">
+  <h2>確認キュー</h2>
+  <div class="desc">AIが確定できなかった項目だけ表示。修正して承認するとデータベースへ反映されます。却下したものはRawログに残ります。</div>
+  <div id="queueList"></div>
+</section>
+
+<!-- ========== データベース ========== -->
+<section class="tab" id="tab-db">
+  <h2>データベース</h2>
+  <div class="subtabs">
+    <button class="on" onclick="dbView('res',this)">予約売上DB</button>
+    <button onclick="dbView('daily',this)">日次集計 (Excel)</button>
+    <button onclick="dbView('shift',this)">個人別実績 (シフト)</button>
+    <button onclick="dbView('raw',this)">Rawログ (原文)</button>
+  </div>
+  <div id="dbResView">
+    <div class="filterbar">
+      <label>期間</label><input type="date" id="fFrom"><span style="color:var(--sub)">〜</span><input type="date" id="fTo">
+      <label>店舗</label><select id="fStore"><option value="">全店</option></select>
+      <label>セラピスト</label><select id="fTher"><option value="">全員</option></select>
+      <label>状態</label><select id="fStatus"><option value="">すべて</option><option>来店済</option><option>予約済</option><option>キャンセル</option></select>
+      <button class="btn sm" onclick="renderDb()">絞込</button>
+      <button class="btn sm" onclick="clearFilter()">解除</button>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="exportCsv()">CSV出力</button>
+      <button class="btn sm" onclick="exportBackup()">バックアップ(JSON)</button>
+      <button class="btn sm" onclick="document.getElementById('bkFile').click()">復元</button>
+      <input type="file" id="bkFile" accept=".json" style="display:none" onchange="importBackup(this)">
+    </div>
+    <div class="tbl-wrap" id="dbTable"></div>
+    <div class="desc" style="margin-top:8px" id="dbSummary"></div>
+  </div>
+  <div id="dbDailyView" style="display:none">
+    <div class="desc">Excel月次売上表から取り込んだ日次実績。同じ店舗・日に予約粒度データがある場合、ダッシュボードでは予約側が優先されます。</div>
+    <div class="tbl-wrap" id="dailyTable"></div>
+  </div>
+  <div id="dbShiftView" style="display:none">
+    <div class="desc">シフトシートから取り込んだ個人別実績 (出勤・売上・新規/顧客/指名)。セラピストランキングに反映されます。</div>
+    <div class="tbl-wrap" id="shiftTable"></div>
+  </div>
+  <div id="dbRawView" style="display:none">
+    <div class="tbl-wrap" id="rawTable"></div>
+  </div>
+</section>
+
+<!-- ========== ダッシュボード ========== -->
+<section class="tab" id="tab-dash">
+  <h2>分析ダッシュボード</h2>
+  <div class="filterbar">
+    <div class="subtabs" style="margin:0">
+      <button class="on" data-p="thisMonth" onclick="setPeriod(this)">今月</button>
+      <button data-p="lastMonth" onclick="setPeriod(this)">先月</button>
+      <button data-p="7d" onclick="setPeriod(this)">過去7日</button>
+      <button data-p="30d" onclick="setPeriod(this)">過去30日</button>
+      <button data-p="all" onclick="setPeriod(this)">全期間</button>
+    </div>
+    <label>店舗</label><select id="dashStore" onchange="renderDash()"><option value="">全店</option></select>
+  </div>
+  <div id="dashAlerts"></div>
+  <div class="cards" id="dashCards"></div>
+  <div class="panel"><h3>日次売上推移 (店舗別積上げ / 目標ライン)</h3><div class="chartbox" style="height:300px"><canvas id="cDaily"></canvas></div></div>
+  <div class="grid2">
+    <div class="panel"><h3>店舗別 目標進捗</h3><div id="budgetBars"></div></div>
+    <div class="panel"><h3>曜日別 平均売上</h3><div class="chartbox" style="height:220px"><canvas id="cDow"></canvas></div></div>
+    <div class="panel"><h3>コース構成 (本数) <span style="font-weight:400;font-size:10.5px;color:var(--sub)">予約粒度データのみ</span></h3><div class="chartbox" style="height:220px"><canvas id="cCourse"></canvas></div></div>
+    <div class="panel"><h3>流入元別 売上 <span style="font-weight:400;font-size:10.5px;color:var(--sub)">予約粒度データのみ</span></h3><div class="chartbox" style="height:220px"><canvas id="cSource"></canvas></div></div>
+    <div class="panel"><h3>時間帯別 本数 <span style="font-weight:400;font-size:10.5px;color:var(--sub)">予約粒度データのみ</span></h3><div class="chartbox" style="height:220px"><canvas id="cHour"></canvas></div></div>
+    <div class="panel"><h3>新規 / 再来 構成</h3><div class="chartbox" style="height:220px"><canvas id="cCust"></canvas></div></div>
+  </div>
+  <div class="panel">
+    <h3>セラピスト別ランキング</h3>
+    <div class="tbl-wrap" id="therRank"></div>
+    <div class="desc" style="margin-top:6px">※ 全体共有はTOP3推奨。全ランキングは管理者間に留めてください。</div>
+  </div>
+</section>
+
+<!-- ========== AI分析 ========== -->
+<section class="tab" id="tab-ai">
+  <h2>AI分析レポート</h2>
+  <div class="steps"><span><b>1</b> 期間データを集計しプロンプト生成</span><span><b>2</b> Claudeに貼付</span><span><b>3</b> 回答を貼り戻して保存</span></div>
+  <div class="panel">
+    <h3>① 分析プロンプト生成</h3>
+    <div class="row">
+      <select id="aiPeriod"><option value="thisMonth">今月</option><option value="lastMonth">先月</option><option value="7d">過去7日</option><option value="30d">過去30日</option><option value="all">全期間</option></select>
+      <select id="aiType">
+        <option value="daily">日次/期間サマリ + 未達要因 + 翌日施策</option>
+        <option value="therapist">セラピスト別 強み弱み分析</option>
+        <option value="source">流入元/媒体 効果分析</option>
+        <option value="crm">リピート・指名 CRM分析</option>
+      </select>
+      <button class="btn vio" onclick="genAnalysisPrompt()">🤖 プロンプト生成&コピー</button>
+      <span id="genMsg2" style="font-size:12px;color:var(--gn)"></span>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>② Claudeの回答を貼り付け</h3>
+    <textarea id="aiReportIn" rows="7" placeholder="Claudeの分析レポート(Markdown)をここに貼り付け"></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn pri" onclick="saveReport()">💾 レポート保存</button></div>
+  </div>
+  <h2>保存済みレポート</h2>
+  <div id="reportList"></div>
+</section>
+
+<!-- ========== マスタ設定 ========== -->
+<section class="tab" id="tab-master">
+  <h2>マスタ設定</h2>
+  <div class="desc">AIの読取精度はマスタ整備で決まります。表記ゆれ(別名)はカンマ区切りで追加してください。変更は自動保存されます。</div>
+  <div class="grid2">
+    <div class="panel"><h3>店舗マスタ / 月次目標</h3><div id="mstStores"></div></div>
+    <div class="panel"><h3>コース料金マスタ</h3><div id="mstCourses"></div></div>
+  </div>
+  <div class="panel"><h3>セラピスト名寄せマスタ</h3><div id="mstTher"></div>
+    <div class="mst-add row"><input id="newTherName" placeholder="名前"><input id="newTherAlias" placeholder="別名(カンマ区切り)"><select id="newTherStore"></select><button class="btn sm grn" onclick="addTher()">＋ 追加</button></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>自動取込ルール</h3><div id="mstRules"></div></div>
+    <div class="panel"><h3>データ管理</h3>
+      <div class="row">
+        <button class="btn sm" onclick="exportBackup()">全データバックアップ</button>
+        <button class="btn sm dng" onclick="clearExcelLayers()">Excel月次データのみ削除</button>
+        <button class="btn sm dng" onclick="wipeAll()">全データ初期化</button>
+      </div>
+      <div class="help">データはこのブラウザ内(localStorage)に保存されます。PC変更・ブラウザ変更時はバックアップ→復元を使用してください。</div>
+    </div>
+  </div>
+</section>
+
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalBody"></div></div>
+<script>
+"use strict";
+/* ================= 状態・マスタ ================= */
+const DEFAULT_MASTERS = {
+  stores: [
+    {name:"蒲田", aliases:["リッツ","ザリッツ","ザ・リッツ","ritz","K","かまた"], target:2600000},
+    {name:"大井町", aliases:["スパ","ラウンジ","スパラウンジ","O","おおいまち","大井"], target:2800000},
+    {name:"巣鴨", aliases:["XEBEC","ジーベック","S","すがも"], target:1600000}
+  ],
+  therapists: [
+    {name:"あんず",aliases:[],store:"大井町"},{name:"ちなつ",aliases:[],store:"大井町"},
+    {name:"えみり",aliases:[],store:"大井町"},{name:"えりか",aliases:[],store:"蒲田"},
+    {name:"かすみ",aliases:[],store:"蒲田"},{name:"かずは",aliases:[],store:"大井町"},
+    {name:"くみ",aliases:[],store:"蒲田"},{name:"くれは",aliases:[],store:"大井町"},
+    {name:"しおん",aliases:[],store:"蒲田"},{name:"しずか",aliases:[],store:"大井町"},
+    {name:"しのぶ",aliases:[],store:"蒲田"},{name:"すみれ",aliases:[],store:"大井町"},
+    {name:"ちあき",aliases:[],store:"巣鴨"},{name:"ちひろ",aliases:[],store:"蒲田"},
+    {name:"てるみ",aliases:[],store:"大井町"},{name:"ののは",aliases:[],store:"蒲田"},
+    {name:"ひより",aliases:[],store:"大井町"},{name:"ほのか",aliases:[],store:"巣鴨"},
+    {name:"ますみ",aliases:[],store:"大井町"},{name:"まな",aliases:[],store:"蒲田"},
+    {name:"みこ",aliases:[],store:"蒲田"},{name:"やすの",aliases:[],store:"蒲田"},
+    {name:"ゆい",aliases:[],store:"巣鴨"},{name:"ゆかり",aliases:[],store:"大井町"},
+    {name:"わか",aliases:[],store:"蒲田"}
+  ],
+  courses: {
+    "蒲田":{"90":12000,"120":16000,"150":20000,"180":24000},
+    "大井町":{"90":12000,"120":16000,"150":20000,"180":24000},
+    "巣鴨":{"60":8000,"90":12000,"120":16000,"150":20000,"180":24000}
+  },
+  payRate: 0.56,
+  autoThreshold: 85,
+  priceTolerance: 0
+};
+const CUST_ALIASES = {
+  "新規":["新規","初","初回","はじめて","初めて","フリー新規","新客"],
+  "再来":["リピ","リピ様","リピート","再来","既存","顧客","常連","前回の方","リピーター"]
+};
+const SOURCES = ["LINE","HP","X","電話","エステ魂","Google","紹介","その他","不明"];
+const STORE_KEY = "esthe_ops_v2";
+let MEM = null; // localStorage不可時のフォールバック
+let S = loadState();
+
+function loadState(){
+  try{
+    const j = localStorage.getItem(STORE_KEY);
+    if(j){ const s = JSON.parse(j); s.masters = Object.assign({}, JSON.parse(JSON.stringify(DEFAULT_MASTERS)), s.masters); s.daily=s.daily||[]; s.shift=s.shift||[]; return s; }
+  }catch(e){}
+  return { raws:[], db:[], queue:[], reports:[], daily:[], shift:[], masters: JSON.parse(JSON.stringify(DEFAULT_MASTERS)), seq:{raw:0,ext:0,res:0} };
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
+  catch(e){ MEM = JSON.stringify(S); }
+  updateBadges();
+}
+function nid(p){ S.seq[p] = (S.seq[p]||0)+1; const n = String(S.seq[p]).padStart(4,"0"); return {raw:"RAW-",ext:"EXT-",res:"RSV-"}[p]+n; }
+
+/* ================= ユーティリティ ================= */
+const $ = id => document.getElementById(id);
+const yen = n => (n==null||isNaN(n)) ? "-" : Math.round(n).toLocaleString("ja-JP");
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._tm); t._tm=setTimeout(()=>t.style.display="none",2600); }
+function fmtD(d){ return d ? d : "-"; }
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function addDays(iso, n){ const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function copyText(text, cb){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(cb, ()=>fallbackCopy(text,cb));
+  } else fallbackCopy(text,cb);
+}
+function fallbackCopy(text, cb){
+  const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta);
+  ta.select(); try{document.execCommand("copy")}catch(e){} document.body.removeChild(ta); cb();
+}
+function normalize(t){
+  return t.replace(/[０-９Ａ-Ｚａ-ｚ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+    .replace(/／/g,"/").replace(/（/g,"(").replace(/）/g,")").replace(/：/g,":")
+    .replace(/[〜～]/g,"~").replace(/円/g,"円").replace(/[　]/g," ").replace(/¥|￥/g,"");
+}
+function kataToHira(s){ return s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60)); }
+
+/* ================= 内蔵パーサ ================= */
+function buildStoreIndex(){
+  const idx={};
+  S.masters.stores.forEach(st=>{ idx[st.name]=st.name; (st.aliases||[]).forEach(a=>{ if(a) idx[kataToHira(a.toLowerCase())]=st.name; }); });
+  return idx;
+}
+function findStore(line){
+  const idx=buildStoreIndex(), l=kataToHira(line.toLowerCase());
+  let hit=null, hitKey="";
+  for(const k in idx){ if(k.length<2 && !/[一-龠]/.test(k)) continue; if(l.includes(kataToHira(k.toLowerCase()))){ if(k.length>hitKey.length){hit=idx[k];hitKey=k;} } }
+  return hit;
+}
+function findTherapist(line){
+  const l=kataToHira(line);
+  let best=null, bestLen=0;
+  S.masters.therapists.forEach(t=>{
+    const cands=[t.name].concat(t.aliases||[]);
+    cands.forEach(c=>{ if(!c)return; const cc=kataToHira(c.toLowerCase());
+      if(cc.length>=2 && kataToHira(l.toLowerCase()).includes(cc) && cc.length>bestLen){ best=t; bestLen=cc.length; } });
+  });
+  return best;
+}
+function findDate(line, recv){
+  let m = line.match(/(\d{1,2})[\/月](\d{1,2})日?/);
+  if(m){
+    const y = new Date(recv+"T00:00:00").getFullYear();
+    let iso = y+"-"+String(+m[1]).padStart(2,"0")+"-"+String(+m[2]).padStart(2,"0");
+    if(new Date(iso) - new Date(recv) > 90*864e5) iso = (y-1)+iso.slice(4);
+    return {date:iso, inferred:false};
+  }
+  if(/一昨日/.test(line)) return {date:addDays(recv,-2), inferred:true};
+  if(/昨日/.test(line)) return {date:addDays(recv,-1), inferred:true};
+  if(/今日|本日/.test(line)) return {date:recv, inferred:true};
+  if(/明日/.test(line)) return {date:addDays(recv,1), inferred:true};
+  return null;
+}
+const COURSE_SET=[60,70,80,90,100,110,120,130,150,160,180,200,240];
+function parseReport(rawText, recvDate, reporter){
+  const text = normalize(rawText);
+  const blocks = text.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
+  const out = [];
+  blocks.forEach(block=>{
+    let ctx = {store:null, date:null, dateInferred:false};
+    const lines = block.split("\n").map(l=>l.trim()).filter(Boolean);
+    let cur = null;
+    const push = ()=>{ if(cur && (cur.therapist_raw||cur.minutes||cur.sales||cur.start)) out.push(cur); cur=null; };
+    lines.forEach(line=>{
+      const st = findStore(line); if(st) ctx.store=st;
+      const dt = findDate(line, recvDate); if(dt){ ctx.date=dt.date; ctx.dateInferred=dt.inferred; }
+      const ther = findTherapist(line);
+      // 純粋なヘッダ行(店舗/日付のみ)はスキップ
+      const stripped = line.replace(/(\d{1,2})[\/月](\d{1,2})日?|一昨日|昨日|今日|本日|明日/g,"").trim();
+      const hasContent = /\d/.test(stripped) || ther || /指名|本指|リピ|新規|キャンセル/.test(line);
+      if(!hasContent) return;
+
+      let work = " "+line+" ";
+      // 時刻
+      let start=null;
+      let tm = work.match(/(\d{1,2}):(\d{2})/);
+      if(tm && +tm[1]<=29 && +tm[2]<=59){ start = String(+tm[1]).padStart(2,"0")+":"+tm[2]; work=work.replace(tm[0]," "); }
+      else { tm = work.match(/(\d{1,2})時(半)?/); if(tm && +tm[1]<=29){ start=String(+tm[1]).padStart(2,"0")+":"+(tm[2]?"30":"00"); work=work.replace(tm[0]," "); } }
+      // 残り時刻表記(~21:00等)を除去
+      work = work.replace(/~?\d{1,2}:\d{2}/g," ");
+      // 本数 (2本など)
+      let count=1; const cm = work.match(/(\d{1,2})\s*本/);
+      if(cm && +cm[1]>=1 && +cm[1]<=9){ count=+cm[1]; work=work.replace(cm[0]," "); }
+      // コース分数 (◯分 / 既知の分数列挙)
+      const courses=[];
+      work = work.replace(/(\d{2,3})\s*分/g, (m0,n)=>{ courses.push(+n); return " "; });
+      if(!courses.length){
+        const nums = (work.match(/\d{2,3}/g)||[]).map(Number).filter(n=>COURSE_SET.includes(n));
+        // 金額と紛らわしいので、明確な区切り(と / 、 / and)か単独出現のみ採用
+        nums.forEach(n=>{ const re=new RegExp("(^|[^\\d,.])"+n+"([^\\d,.]|$)"); if(re.test(work)){ courses.push(n); work=work.replace(re,"$1 $2"); } });
+      }
+      // 取り分
+      let payment=null;
+      const pm = work.match(/(取り?分?|手取り?|支払い?)\s*:?\s*(\d{1,3}(?:,\d{3})+|\d{4,6})/);
+      if(pm){ payment=+pm[2].replace(/,/g,""); work=work.replace(pm[0]," "); }
+      // 割引
+      let discount=null;
+      const dm = work.match(/(割引|値引き?|引き)\s*:?\s*(\d{1,3}(?:,\d{3})+|\d{3,5})/);
+      if(dm){ discount=+dm[2].replace(/,/g,""); work=work.replace(dm[0]," "); }
+      // 合計
+      let isTotal = /合計|計\s*\d|トータル/.test(work);
+      // 売上金額
+      let sales=null;
+      const amts=(work.match(/\d{1,3}(?:,\d{3})+|\d{4,6}/g)||[]).map(s=>+s.replace(/,/g,"")).filter(n=>n>=3000 && n<=500000);
+      const manM = work.match(/(\d+(?:\.\d+)?)\s*万/);
+      if(manM) sales = Math.round(parseFloat(manM[1])*10000);
+      else if(amts.length) sales = amts[0];
+      // 顧客種別・指名
+      let custType=null;
+      if(CUST_ALIASES["新規"].some(a=>line.includes(a))) custType="新規";
+      else if(CUST_ALIASES["再来"].some(a=>line.includes(a))) custType="再来";
+      let nomination = /本指|指名/.test(line) ? "Y" : "不明";
+      let status = /キャンセル|CXL|cxl/.test(line) ? "キャンセル" : (/予約済|入りました|入った/.test(line)?"予約済":"来店済");
+      // 流入元
+      let source="不明";
+      if(/LINE|ライン/i.test(line)) source="LINE";
+      else if(/HP|ホームページ|サイト/i.test(line)) source="HP";
+      else if(/X予約|Twitter|ツイッター|X(から|経由)/i.test(line)) source="X";
+      else if(/電話|TEL/i.test(line)) source="電話";
+      else if(/エステ魂/.test(line)) source="エステ魂";
+      else if(/グーグル|Google|検索/i.test(line)) source="Google";
+      else if(/紹介/.test(line)) source="紹介";
+
+      const hasData = ther || courses.length || sales!=null || start;
+      if(!hasData) return;
+      // 新しい予約の開始判定
+      if(cur && ((ther && cur.therapist_raw && ther.name!==cur._therName) || (start && cur.start))) push();
+      if(!cur) cur = {_block:ctx, therapist_raw:null, _therName:null, start:null, minutes:null, sales:null, payment:null, discount:null, custType:null, nomination:"不明", status:"来店済", source:"不明", count:1, courses:[], isTotal:false};
+      if(ther){ cur.therapist_raw = ther.name; cur._therName = ther.name; }
+      else if(!cur.therapist_raw){
+        // マスタ未登録の名前候補: 先頭の かな/漢字 2〜6文字トークン
+        const nm = line.match(/^([ぁ-んァ-ヶ一-龠]{2,6})(ちゃん|さん|嬢|様)?[\s\d指リ新本キ]/);
+        if(nm && !findStore(nm[1]) && !/今日|本日|昨日|明日|新規|指名|売上|合計/.test(nm[1])) cur.therapist_raw = nm[1];
+      }
+      if(start && !cur.start) cur.start=start;
+      courses.forEach(c=>{ if(!cur.courses.includes(c)) cur.courses.push(c); });
+      if(sales!=null && cur.sales==null) cur.sales=sales;
+      if(payment!=null) cur.payment=payment;
+      if(discount!=null) cur.discount=discount;
+      if(custType && !cur.custType) cur.custType=custType;
+      if(nomination==="Y") cur.nomination="Y";
+      if(status!=="来店済") cur.status=status;
+      if(source!=="不明") cur.source=source;
+      if(count>1) cur.count=count;
+      if(isTotal) cur.isTotal=true;
+      cur._block = {store:ctx.store, date:ctx.date, dateInferred:ctx.dateInferred};
+    });
+    push();
+  });
+  // 予約レコードへ展開 (複数本の分解含む)
+  const recs=[];
+  out.forEach(c=>{
+    const n = Math.max(c.count, c.courses.length>1?c.courses.length:1);
+    for(let i=0;i<n;i++){
+      recs.push({
+        store:c._block.store, date:c._block.date, dateInferred:c._block.dateInferred,
+        therapist_raw:c.therapist_raw, start: i===0?c.start:null,
+        minutes: c.courses[i]!=null?c.courses[i]:(c.courses.length===1?c.courses[0]:null),
+        sales: n>1?null:c.sales, totalSales: n>1?c.sales:null, groupSize:n,
+        payment: n>1?null:c.payment, discount:c.discount,
+        custType:c.custType, nomination:c.nomination, status:c.status, source:c.source
+      });
+    }
+  });
+  return recs;
+}
+
+/* ================= 検証・信頼度・ルーティング ================= */
+function validateRec(r){
+  const m=S.masters, inferred=[], missing=[], anomalies=[];
+  let conf=100;
+  // セラピスト (店舗推定で使うため先に解決)
+  if(!r.therapist){
+    if(r.therapist_raw){
+      const t=findTherapist(r.therapist_raw);
+      if(t){ r.therapist=t.name; }
+      else { r.therapist=r.therapist_raw; anomalies.push("セラピスト「"+r.therapist_raw+"」がマスタ未登録"); conf-=18; }
+    } else { missing.push("セラピスト"); conf-=20; }
+  }
+  // 店舗
+  if(!r.store){
+    const t = m.therapists.find(t=>t.name===r.therapist);
+    if(t && t.store){ r.store=t.store; inferred.push("店舗(主店舗から推定)"); conf-=8; }
+    else { missing.push("店舗"); conf-=25; }
+  }
+  // 日付
+  if(!r.date){ missing.push("日付"); conf-=22; }
+  else if(r.dateInferred){ inferred.push("日付(今日/昨日から補正)"); conf-=3; }
+  // コース・売上
+  const priceTbl = (r.store && m.courses[r.store]) || {};
+  if(r.minutes==null && r.sales==null){ missing.push("コース/売上"); conf-=25; }
+  if(r.minutes!=null && r.sales==null){
+    const p=priceTbl[String(r.minutes)];
+    if(p!=null && r.groupSize===1){ r.sales=p; inferred.push("売上(料金マスタから推定)"); conf-=8; }
+    else { missing.push("売上"); conf-=18; }
+  }
+  if(r.minutes==null && r.sales!=null){
+    const hit=Object.keys(priceTbl).filter(k=>priceTbl[k]===r.sales);
+    if(hit.length===1){ r.minutes=+hit[0]; inferred.push("コース(料金から逆引き)"); conf-=6; }
+    else { missing.push("コース分数"); conf-=10; }
+  }
+  // 金額整合
+  if(r.minutes!=null && r.sales!=null){
+    const p=priceTbl[String(r.minutes)];
+    if(p!=null){
+      const diff=r.sales-p+(r.discount||0);
+      if(r.sales < p && !r.discount){ anomalies.push("売上"+yen(r.sales)+"円が"+r.minutes+"分通常料金"+yen(p)+"円より低い(割引記載なし)"); conf-=15; }
+      else if(r.sales > p*1.8){ anomalies.push("売上が通常料金の1.8倍超(オプション/複数本の可能性)"); conf-=10; }
+    }
+  }
+  // グループ(内訳不明)
+  if(r.groupSize>1 && r.sales==null){
+    if(r.totalSales!=null) anomalies.push(r.groupSize+"本まとめ報告: 合計"+yen(r.totalSales)+"円の内訳が不明");
+    else missing.push("売上(複数本)");
+    conf-=30;
+  }
+  // 取り分
+  if(r.payment==null && r.sales!=null){ r.payment=Math.round(r.sales*m.payRate); inferred.push("取り分(率"+Math.round(m.payRate*100)+"%で推定)"); conf-=5; }
+  if(r.sales!=null && r.payment!=null) r.gross=r.sales-r.payment;
+  if(r.payment!=null && r.sales!=null && r.payment>r.sales){ anomalies.push("取り分が売上を超過"); conf-=20; }
+  // 顧客種別
+  if(!r.custType){
+    if(r.nomination==="Y"){ r.custType="再来"; inferred.push("顧客種別(指名→再来と推定)"); conf-=5; }
+    else { missing.push("顧客種別"); conf-=8; }
+  }
+  // 重複
+  const dup=S.db.find(d=>d.date===r.date && d.store===r.store && d.therapist===r.therapist && (d.start&&r.start ? d.start===r.start : d.sales===r.sales && d.minutes===r.minutes) && d.status!=="キャンセル");
+  if(dup && r.status!=="キャンセル"){ anomalies.push("重複の可能性 ("+dup.id+" と同一内容)"); conf-=25; }
+  conf=Math.max(0,Math.min(100,conf));
+  r.inferred=inferred; r.missing=missing; r.anomalies=anomalies; r.conf=conf;
+  r.review = conf < m.autoThreshold || anomalies.length>0 || missing.includes("店舗") || missing.includes("日付") || missing.includes("セラピスト") || (r.sales==null);
+  return r;
+}
+function routeRecords(recs, rawId){
+  let auto=0, queued=0;
+  recs.forEach(r=>{
+    r.rawId=rawId; r.id=nid("ext");
+    validateRec(r);
+    if(!r.review){ commitToDb(r, false); auto++; }
+    else { S.queue.push(r); queued++; }
+  });
+  save();
+  return {auto, queued};
+}
+function commitToDb(r, reviewed){
+  S.db.push({
+    id:nid("res"), rawId:r.rawId, extId:r.id||null, date:r.date, store:r.store,
+    therapist:r.therapist||r.therapist_raw||"不明", start:r.start, minutes:r.minutes,
+    sales:r.sales||0, payment:r.payment||0, gross:(r.sales||0)-(r.payment||0),
+    custType:r.custType||"不明", nomination:r.nomination||"不明", source:r.source||"不明",
+    status:r.status||"来店済", conf:r.conf!=null?r.conf:100, reviewed:!!reviewed,
+    inferred:(r.inferred||[]).join(" / "), createdAt:new Date().toISOString()
+  });
+  const raw=S.raws.find(x=>x.id===r.rawId); if(raw) raw.status="取込済";
+}
+
+/* ================= 取込UI ================= */
+function saveRaw(text, reporter, via){
+  const raw={id:nid("raw"), ts:new Date().toISOString(), recv:$("recvDate").value||todayStr(), reporter, via, text, status:"未処理"};
+  S.raws.push(raw); return raw;
+}
+function runLocalParse(){
+  const text=$("rawInput").value.trim();
+  if(!text){ toast("LINE原文を貼り付けてください"); return; }
+  const recv=$("recvDate").value||todayStr();
+  const raw=saveRaw(text, $("reporter").value, "内蔵エンジン");
+  const recs=parseReport(text, recv, $("reporter").value);
+  if(!recs.length){ raw.status="要確認"; save(); showParseResult([], raw, 0, 0); toast("予約・売上を検出できませんでした。AIプロンプト生成をお試しください"); return; }
+  const {auto,queued}=routeRecords(recs, raw.id);
+  if(!auto && queued) raw.status="要確認";
+  save();
+  showParseResult(recs, raw, auto, queued);
+  $("rawInput").value="";
+  toast("解析完了: 自動取込 "+auto+"件 / 要確認 "+queued+"件");
+}
+function confBadge(c){
+  const col = c>=85?"var(--gn)":c>=60?"var(--am)":"var(--rd)";
+  return '<span class="conf"><span class="bar"><i style="width:'+c+'%;background:'+col+'"></i></span><span style="color:'+col+'">'+c+'</span></span>';
+}
+function showParseResult(recs, raw, auto, queued){
+  $("parseResultPanel").style.display="block";
+  let h='<div class="row" style="margin-bottom:10px"><span class="tag gy">'+esc(raw.id)+'</span><span class="tag gn">自動取込 '+auto+'件</span><span class="tag am">要確認 '+queued+'件</span></div>';
+  if(!recs.length){ h+='<div class="empty">抽出ゼロ。原文はRawログに保存済みです。</div>'; }
+  else{
+    h+='<div class="tbl-wrap"><table><tr><th>日付</th><th>店舗</th><th>セラピスト</th><th>時刻</th><th>分</th><th class="num">売上</th><th>顧客</th><th>指名</th><th>流入</th><th>信頼度</th><th>判定</th></tr>';
+    recs.forEach(r=>{
+      h+='<tr><td>'+fmtD(r.date)+'</td><td>'+esc(r.store||"?")+'</td><td>'+esc(r.therapist||r.therapist_raw||"?")+'</td><td>'+(r.start||"-")+'</td><td>'+(r.minutes||"-")+'</td><td class="num">'+yen(r.sales)+'</td><td>'+esc(r.custType||"?")+'</td><td>'+esc(r.nomination)+'</td><td>'+esc(r.source)+'</td><td>'+confBadge(r.conf)+'</td><td>'+(r.review?'<span class="tag am">確認キューへ</span>':'<span class="tag gn">自動取込</span>')+'</td></tr>';
+      const iss=[].concat(r.missing.map(x=>"不足: "+x), r.anomalies, r.inferred.map(x=>"推定: "+x));
+      if(iss.length) h+='<tr><td colspan="11" style="font-size:11px;color:var(--am);background:#fffdf5">'+esc(iss.join(" ／ "))+'</td></tr>';
+    });
+    h+='</table></div>';
+  }
+  $("parseResult").innerHTML=h;
+  renderQueue();
+}
+function loadSample(){
+  $("rawInput").value="蒲田 6/12\nちひろ 19:00~120分 指名 リピ様\n売上18000 取り10000 LINE予約\n\n今日大井町\nますみさんリピ2本 90と120 合計31000\n\n昨日の蒲田\nみこ 120 新規 16000 HPから\n\n大井町 6/12\nゆかり 120分 14000";
+  $("recvDate").value=todayStr();
+}
+/* --- AI抽出プロンプト --- */
+function mastersForPrompt(){
+  return {
+    stores: S.masters.stores.map(s=>({正規名:s.name, 別名:s.aliases})),
+    therapists: S.masters.therapists.map(t=>({名前:t.name, 別名:t.aliases, 主店舗:t.store})),
+    course_prices: S.masters.courses,
+    顧客種別の正規化: CUST_ALIASES,
+    取り分率の目安: S.masters.payRate
+  };
+}
+function genExtractPrompt(){
+  const text=$("rawInput").value.trim();
+  if(!text){ toast("先にLINE原文を貼り付けてください"); return; }
+  const recv=$("recvDate").value||todayStr();
+  const raw=saveRaw(text, $("reporter").value, "AIプロンプト"); save();
+  const p = `あなたはメンズエステ店舗(ザ・リッツ蒲田 / スパラウンジ大井町 / 巣鴨)の売上報告を構造化するAIです。
+以下のLINE報告を読み取り、予約売上データ(JSON)に変換してください。
+
+# ルール
+- 原文にない情報を確定値として補完しない
+- マスタや文脈から推定した項目は inferred_fields に列挙する
+- 不明な項目は null とする
+- 「今日」「昨日」は受信日(${recv})を基準に日付へ変換する
+- 複数予約が1文に含まれる場合は reservations 配列に1予約=1要素で分解する
+- 合計金額のみで内訳不明な場合は sales_amount を null にし、anomalies に「合計◯円の内訳不明」と記載する
+- 金額がコース料金マスタと矛盾する場合は anomalies に記載する
+- 取り分の報告が無い場合は売上×${S.masters.payRate}で推定し inferred_fields に "therapist_payment" を入れる
+- 信頼度 confidence を0〜100で付ける
+- 人間確認が必要なら review_required=true とする
+- 出力はJSONのみ。前後に説明文を付けない
+
+# マスタ
+${JSON.stringify(mastersForPrompt(), null, 1)}
+
+# 出力スキーマ
+{"raw_id":"${raw.id}","reservations":[{"date":"YYYY-MM-DD","store":"蒲田|大井町|巣鴨|null","therapist_raw":"原文の名前","therapist":"正規名orNull","start_time":"HH:MM|null","course_minutes":120,"sales_amount":18000,"therapist_payment":10000,"discount":null,"customer_type":"新規|再来|null","nomination":"Y|N|不明","source":"LINE|HP|X|電話|エステ魂|Google|紹介|不明","status":"来店済|予約済|キャンセル","inferred_fields":[],"missing_fields":[],"anomalies":[],"confidence":95,"review_required":false}]}
+
+# LINE報告(受信日: ${recv} / 報告者: ${$("reporter").value})
+${text}`;
+  copyText(p, ()=>{ $("genMsg").textContent="✓ コピーしました。Claudeに貼り付けてください (raw_id: "+raw.id+")"; toast("抽出プロンプトをコピーしました"); });
+}
+function importAiJson(){
+  let t=$("aiJson").value.trim();
+  if(!t){ toast("ClaudeのJSONを貼り付けてください"); return; }
+  t=t.replace(/^```(json)?/m,"").replace(/```\s*$/m,"").trim();
+  let j; try{ j=JSON.parse(t); }catch(e){ toast("JSONとして読めません: "+e.message); return; }
+  let arr = Array.isArray(j) ? j : (j.reservations||[]);
+  if(!Array.isArray(arr) || !arr.length){ toast("reservations配列が見つかりません"); return; }
+  let rawId = j.raw_id && S.raws.some(r=>r.id===j.raw_id) ? j.raw_id : null;
+  if(!rawId){ const raw=saveRaw("(AI JSON取込)", $("reporter").value, "AI JSON"); rawId=raw.id; }
+  const recs = arr.map(x=>({
+    store: x.store||null, date: x.date||null, dateInferred:(x.inferred_fields||[]).some(f=>/date|日付/i.test(f)),
+    therapist_raw: x.therapist_raw||x.therapist||null, therapist: x.therapist||null,
+    start: x.start_time||null, minutes: x.course_minutes!=null?+x.course_minutes:null,
+    sales: x.sales_amount!=null?+x.sales_amount:null, totalSales:null, groupSize:1,
+    payment: x.therapist_payment!=null?+x.therapist_payment:null, discount: x.discount!=null?+x.discount:null,
+    custType: x.customer_type||null, nomination: x.nomination||"不明", status: x.status||"来店済",
+    source: x.source||"不明", aiConf: x.confidence, aiReview: x.review_required===true,
+    _aiAnoms: x.anomalies||[], _aiMissing: x.missing_fields||[]
+  }));
+  recs.forEach(r=>{ r.__post=(rec)=>{} });
+  let auto=0,queued=0;
+  recs.forEach(r=>{
+    r.rawId=rawId; r.id=nid("ext");
+    validateRec(r);
+    // AI側の判定も尊重
+    if(r.aiConf!=null) r.conf=Math.min(r.conf, r.aiConf);
+    (r._aiAnoms||[]).forEach(a=>{ if(!r.anomalies.includes(a)) r.anomalies.push(a); });
+    if(r.aiReview || r.anomalies.length || r.conf<S.masters.autoThreshold || r.sales==null) { r.review=true; S.queue.push(r); queued++; }
+    else { r.review=false; commitToDb(r,false); auto++; }
+  });
+  save();
+  showParseResult(recs, S.raws.find(x=>x.id===rawId)||{id:rawId}, auto, queued);
+  $("aiJson").value="";
+  toast("AI結果取込: 自動 "+auto+"件 / 要確認 "+queued+"件");
+}
+/* --- 手入力 --- */
+function manualFormHtml(){
+  const stores=S.masters.stores.map(s=>'<option>'+esc(s.name)+'</option>').join("");
+  const thers=S.masters.therapists.map(t=>'<option>'+esc(t.name)+'</option>').join("");
+  return `<div><label>日付</label><input type="date" id="mDate" value="${todayStr()}"></div>
+  <div><label>店舗</label><select id="mStore">${stores}</select></div>
+  <div><label>セラピスト</label><select id="mTher">${thers}</select></div>
+  <div><label>開始時刻</label><input type="time" id="mStart"></div>
+  <div><label>コース分</label><select id="mMin"><option></option><option>60</option><option>90</option><option selected>120</option><option>150</option><option>180</option></select></div>
+  <div><label>売上</label><input type="number" id="mSales" placeholder="18000"></div>
+  <div><label>取り分</label><input type="number" id="mPay" placeholder="空欄=率で自動"></div>
+  <div><label>顧客種別</label><select id="mCust"><option>再来</option><option>新規</option><option>不明</option></select></div>
+  <div><label>指名</label><select id="mNom"><option>Y</option><option>N</option><option>不明</option></select></div>
+  <div><label>流入元</label><select id="mSrc">${SOURCES.map(s=>'<option>'+s+'</option>').join("")}</select></div>
+  <div><label>状態</label><select id="mStatus"><option>来店済</option><option>予約済</option><option>キャンセル</option></select></div>`;
+}
+function manualAdd(){
+  if(!$("mSales").value && !$("mMin").value){ toast("売上かコースを入力してください"); return; }
+  const raw=saveRaw("(手入力) "+$("mStore").value+" "+$("mDate").value+" "+$("mTher").value, "管理者", "手入力");
+  const r={ store:$("mStore").value, date:$("mDate").value, therapist:$("mTher").value, therapist_raw:$("mTher").value,
+    start:$("mStart").value||null, minutes:$("mMin").value?+$("mMin").value:null,
+    sales:$("mSales").value?+$("mSales").value:null, payment:$("mPay").value?+$("mPay").value:null,
+    custType:$("mCust").value, nomination:$("mNom").value, status:$("mStatus").value, source:$("mSrc").value,
+    groupSize:1, rawId:raw.id, id:nid("ext") };
+  validateRec(r);
+  commitToDb(r, true); raw.status="取込済"; save();
+  toast("登録しました ("+(r.anomalies.length?"⚠ "+r.anomalies.join(" / "):"正常")+")");
+  $("mSales").value=""; $("mPay").value=""; $("mStart").value="";
+}
+
+/* ================= Excel/CSV取込 ================= */
+let XL={wb:null, name:""};
+function handleXlsx(inp){
+  const f=inp.files[0]; if(!f) return;
+  if(typeof XLSX==="undefined"){ toast("Excel読込ライブラリが未読込です(ネット接続を確認)"); return; }
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      XL.wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+      XL.name=f.name;
+      const sel=$("xlSheet");
+      sel.innerHTML=XL.wb.SheetNames.map(s=>'<option>'+esc(s)+'</option>').join("");
+      sel.style.display="inline-block";
+      // 売上っぽいシートを初期選択
+      const hit=XL.wb.SheetNames.find(s=>/売上|日報|daily/i.test(s)); if(hit) sel.value=hit;
+      previewSheet();
+      $("xlActions").style.display="flex";
+      // 月次売上表形式の自動検出
+      const pairs=detectMonthly(XL.wb);
+      if(pairs.length){
+        $("xlMonthly").style.display="block";
+        $("xlMonthlyInfo").innerHTML='📘 <b>月次売上表形式を検出</b>: '+pairs.map(p=>esc(p.store)+'(売上+'+(p.shiftSheet?'シフト':'シフト無')+')').join(" / ")+' → 日次実績と個人別売上をワンクリックで一括取込できます';
+      } else $("xlMonthly").style.display="none";
+    }catch(err){ toast("読込エラー: "+err.message); }
+  };
+  rd.readAsArrayBuffer(f); inp.value="";
+}
+function xlRows(){
+  if(!XL.wb) return [];
+  return XLSX.utils.sheet_to_json(XL.wb.Sheets[$("xlSheet").value],{header:1,raw:true,defval:null});
+}
+function previewSheet(){
+  const rows=xlRows().slice(0,10);
+  if(!rows.length){ $("xlPreview").innerHTML='<div class="empty">空のシートです</div>'; return; }
+  $("xlPreview").innerHTML='<div class="tbl-wrap"><table>'+rows.map(r=>'<tr>'+(r||[]).slice(0,12).map(c=>'<td>'+esc(xlCellStr(c)).slice(0,16)+'</td>').join("")+'</tr>').join("")+'</table></div><div class="desc" style="margin-top:4px">'+esc(XL.name)+' / '+esc($("xlSheet").value)+' (先頭10行プレビュー)</div>';
+}
+function xlCellStr(c){
+  if(c==null) return "";
+  if(c instanceof Date) return c.getFullYear()+"-"+String(c.getMonth()+1).padStart(2,"0")+"-"+String(c.getDate()).padStart(2,"0");
+  return String(c);
+}
+const COLSYN={
+  date:["日付","日時","年月日","来店日","対象日"], store:["店舗","店名"], ther:["セラピスト","セラピ","名前","担当","源氏名"],
+  start:["開始","時刻","スタート","時間帯"], pay:["取り分","取分","支払","手取","セラピスト支払"], min:["コース","分数"], room:["部屋"],
+  sales:["総売上","売上","金額","料金","実績"],
+  cust:["顧客種別","新規/再来","新規再来","区分","種別"], nom:["指名"], src:["流入","媒体","経由","チャネル"], status:["ステータス","状態"]
+};
+function detectHeader(rows){
+  let best={row:-1, score:0, map:{}};
+  for(let i=0;i<Math.min(rows.length,12);i++){
+    const r=rows[i]||[], map={}; let score=0;
+    r.forEach((c,j)=>{
+      if(typeof c!=="string") return;
+      const s=c.trim();
+      for(const k in COLSYN){ if(map[k]==null && COLSYN[k].some(syn=>s.includes(syn))){ map[k]=j; score++; break; } }
+    });
+    if(score>best.score){ best={row:i, score, map}; }
+  }
+  return best.score>=3 ? best : null;
+}
+function xlDate(v, fallbackYear){
+  if(v==null) return null;
+  if(v instanceof Date && !isNaN(v)) return xlCellStr(v);
+  if(typeof v==="number" && v>30000 && v<60000){ const d=new Date(Math.round((v-25569)*864e5)); return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0"); }
+  if(typeof v==="string"){
+    let m=v.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
+    if(m) return m[1]+"-"+String(+m[2]).padStart(2,"0")+"-"+String(+m[3]).padStart(2,"0");
+    m=v.match(/(\d{1,2})[\/月](\d{1,2})/);
+    if(m) return fallbackYear+"-"+String(+m[1]).padStart(2,"0")+"-"+String(+m[2]).padStart(2,"0");
+  }
+  return null;
+}
+function xlNum(v){ if(v==null) return null; if(typeof v==="number") return v; const n=parseFloat(String(v).replace(/[,，円\s]/g,"")); return isFinite(n)?n:null; }
+function excelLocalImport(){
+  const rows=xlRows();
+  const hd=detectHeader(rows);
+  if(!hd){ toast("ヘッダ行を検出できませんでした(キーワード3つ以上必要)。AIプロンプトルートを使ってください"); return; }
+  const year=new Date().getFullYear();
+  const raw=saveRaw("(Excel取込) "+XL.name+" / "+$("xlSheet").value+" / ヘッダ行"+(hd.row+1), $("reporter").value, "Excel");
+  const recs=[]; let aggSkip=0;
+  for(let i=hd.row+1;i<rows.length;i++){
+    const r=rows[i]||[]; const g=k=>hd.map[k]!=null?r[hd.map[k]]:null;
+    const date=xlDate(g("date"), year);
+    const sales=xlNum(g("sales"));
+    const therRaw=g("ther")!=null?String(g("ther")).trim():null;
+    if(!date && sales==null && !therRaw) continue; // 空行・小計行スキップ
+    if(therRaw && /合計|小計|計$/.test(therRaw)) continue;
+    if(!therRaw && hd.map.ther==null){ aggSkip++; continue; } // セラピスト列なし=日次集計表。予約DBに混ぜない
+    let minutes=null; const mv=g("min");
+    if(mv!=null){ const mm=String(mv).match(/\d{2,3}/); if(mm) minutes=+mm[0]; }
+    let start=null; const sv=g("start");
+    if(sv instanceof Date) start=String(sv.getHours()).padStart(2,"0")+":"+String(sv.getMinutes()).padStart(2,"0");
+    else if(typeof sv==="number" && sv>0 && sv<1){ const t=Math.round(sv*1440); start=String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"); }
+    else if(sv!=null){ const tm=String(sv).match(/(\d{1,2}):(\d{2})/); if(tm) start=String(+tm[1]).padStart(2,"0")+":"+tm[2]; }
+    const cu=g("cust")!=null?String(g("cust")):"";
+    const nm=g("nom")!=null?String(g("nom")):"";
+    const stv=g("status")!=null?String(g("status")):"";
+    const stoRaw=g("store")!=null?String(g("store")):"";
+    recs.push({
+      store: stoRaw?(findStore(stoRaw)||stoRaw.trim()):($("xlStore").value||null), date, dateInferred:false,
+      therapist_raw: therRaw, start, minutes,
+      sales, totalSales:null, groupSize:1, payment:xlNum(g("pay")), discount:null,
+      custType: /新規|初/.test(cu)?"新規":(/リピ|再来|既存/.test(cu)?"再来":null),
+      nomination: /[○◯Yyはいあり指名]/.test(nm)&&nm!==""?"Y":(/[×✕Nnなし]/.test(nm)?"N":"不明"),
+      status: /キャンセル/.test(stv)?"キャンセル":(/予約/.test(stv)?"予約済":"来店済"),
+      source: g("src")!=null?String(g("src")).trim():"不明"
+    });
+  }
+  if(!recs.length){
+    raw.status="要確認"; save();
+    toast(aggSkip?("この表は日次集計表のようです("+aggSkip+"行)。1予約=1行のデータのみ内蔵取込できます。AIプロンプトルートを使ってください"):"取込対象行がありません");
+    return;
+  }
+  const res=routeRecords(recs, raw.id);
+  showParseResult(recs, raw, res.auto, res.queued);
+  toast("Excel取込: 自動 "+res.auto+"件 / 要確認 "+res.queued+"件"+(aggSkip?" / 集計行スキップ "+aggSkip+"件":""));
+}
+/* --- 月次売上表形式 (【店】売上 + シフト) 専用取込 --- */
+function detectMonthly(wb){
+  const pairs=[];
+  wb.SheetNames.forEach((sn,i)=>{
+    const m=sn.match(/【(.+?)】.*売上|売上.*【(.+?)】/);
+    if(!m) return;
+    const store=findStore(m[1]||m[2])||(m[1]||m[2]);
+    // 直後のシフトシートをペアにする
+    let shiftSheet=null;
+    for(let j=i+1;j<wb.SheetNames.length;j++){
+      const nx=wb.SheetNames[j];
+      if(/^シフト/.test(nx)){ shiftSheet=nx; break; }
+      if(/売上/.test(nx)) break;
+    }
+    pairs.push({salesSheet:sn, shiftSheet, store});
+  });
+  return pairs;
+}
+function rowsOf(sn){ return XLSX.utils.sheet_to_json(XL.wb.Sheets[sn],{header:1,raw:true,defval:null}); }
+const cnt=v=>{ const n=typeof v==="number"?v:parseFloat(v); return (isFinite(n)&&n>=0&&n<=30)?Math.round(n):0; }; // 人数カウント列の汚れ(金額誤入力等)を遮断
+function buildKanriIndex(){
+  // 管理シフト: 日付×部屋番号×早遅番 → 名前。シフトシートの名前未記入を補完する正解データ
+  const ks=XL.wb.SheetNames.find(s=>/管理シフト/.test(s));
+  if(!ks) return null;
+  const rows=rowsOf(ks);
+  let hr=-1;
+  for(let i=0;i<Math.min(rows.length,6);i++){ if((rows[i]||[]).some(c=>c==="日付")){ hr=i; break; } }
+  if(hr<0) return null;
+  const roomCols=[];
+  (rows[hr]||[]).forEach((c,j)=>{ if(typeof c==="string"){ const dg=(normalize(c).match(/\d{3,4}/)||[])[0]; if(dg) roomCols.push({col:j, key:dg}); } });
+  if(!roomCols.length) return null;
+  const idx={}; let day=0;
+  for(let i=hr+1;i<rows.length;i++){
+    const r=rows[i]||[];
+    const d0=typeof r[0]==="number"?r[0]:parseFloat(r[0]);
+    if(isFinite(d0)&&d0>=1&&d0<=31) day=Math.round(d0);
+    const sl=r[2];
+    if(sl!=="早番"&&sl!=="遅番") continue;
+    if(!day) continue;
+    roomCols.forEach(rc=>{
+      const nm=r[rc.col];
+      if(typeof nm==="string"&&nm.trim()&&!/ダミー/.test(nm)) idx[day+"|"+rc.key+"|"+sl]=nm.trim();
+    });
+  }
+  return idx;
+}
+function importMonthly(){
+  const pairs=detectMonthly(XL.wb);
+  if(!pairs.length){ toast("月次売上表形式を検出できません"); return; }
+  const raw=saveRaw("(月次売上表一括取込) "+XL.name+" / "+pairs.map(p=>p.store).join(","), $("reporter").value, "Excel月次");
+  let dCnt=0, sCnt=0, months=new Set();
+  pairs.forEach(p=>{
+    const rows=rowsOf(p.salesSheet);
+    // ヘッダ行: 「日時」を含む行
+    let hi=-1, dateCol=-1;
+    for(let i=0;i<Math.min(rows.length,8);i++){
+      const j=(rows[i]||[]).findIndex(c=>typeof c==="string"&&c.trim()==="日時");
+      if(j>=0){ hi=i; dateCol=j; break; }
+    }
+    if(hi<0) return;
+    const col=k=>dateCol+k; // 日時からの相対: +1曜日 +2実績 +3取り分 +4粗利 +5実績累計 +6予算 +7予算累計 +8進捗 +9差異 +10客単価 +11新規 +12顧客 +13指名
+    const dailyNew=[];
+    let firstDate=null;
+    for(let i=hi+1;i<rows.length;i++){
+      const r=rows[i]||[];
+      const dv=r[dateCol];
+      const iso=xlDate(dv, new Date().getFullYear());
+      if(!iso) continue;
+      if(!firstDate) firstDate=iso;
+      const num=v=>{ const n=typeof v==="number"?v:parseFloat(v); return isFinite(n)?n:0; };
+      dailyNew.push({date:iso, store:p.store, sales:num(r[col(2)]), payment:num(r[col(3)]), gross:num(r[col(4)]),
+        budget:num(r[col(6)]), avgPrice:num(r[col(10)]), nw:cnt(r[col(11)]), rep:cnt(r[col(12)]), shimei:cnt(r[col(13)]), rawId:raw.id});
+    }
+    if(!dailyNew.length) return;
+    const ym=firstDate.slice(0,7); months.add(p.store+" "+ym);
+    // 同店舗・同月の既存データを置換 (再取込しても重複しない)
+    S.daily=S.daily.filter(d=>!(d.store===p.store && d.date.slice(0,7)===ym));
+    S.daily.push(...dailyNew); dCnt+=dailyNew.length;
+    // ---- シフトシート: 個人別 ----
+    if(!p.shiftSheet) return;
+    const sr=rowsOf(p.shiftSheet);
+    // 部屋ブロック: 名前列とその右3列(売上/取り分/粗利)。1行目の「売上」ラベル位置から特定
+    let salesCols=[];
+    for(let i=0;i<Math.min(sr.length,4);i++){
+      const f=[];(sr[i]||[]).forEach((c,j)=>{ if(c==="売上") f.push(j); });
+      if(f.length){ salesCols=f; break; }
+    }
+    if(!salesCols.length) return;
+    const rooms=salesCols.map(sc=>{ const r0=sr[0]||[]; for(let j=sc-1;j>=Math.max(0,sc-3);j--){ if(typeof r0[j]==="string"&&r0[j].trim()) return r0[j].trim(); } return ""; });
+    const roomKeys=rooms.map(rm=>(normalize(rm).match(/\d{3,4}/)||[""])[0]); // 部屋番号で管理シフトと突合 (表記ゆれ対策)
+    const kanri=buildKanriIndex();
+    // ---- Pass1: スロット(日×部屋×早遅番)単位で収集 ----
+    const slots=[]; // {day, sl, bi, name, sales, pay, gross, nw, rep, shimei}
+    let day=0;
+    for(let i=0;i<sr.length;i++){
+      const r=sr[i]||[];
+      const d0=typeof r[0]==="number"?r[0]:parseFloat(r[0]);
+      if(isFinite(d0)&&d0>=1&&d0<=31) day=Math.round(d0);
+      const sl=r[2]; // 早番/遅番
+      if(sl!=="早番"&&sl!=="遅番") continue;
+      if(!day) continue;
+      const num=v=>{ const n=typeof v==="number"?v:parseFloat(v); return isFinite(n)?n:0; };
+      salesCols.forEach((sc,bi)=>{
+        const nameRaw=r[sc-1];
+        let nm=(typeof nameRaw==="string")?nameRaw.trim():"";
+        if(nm==="新規/顧客/指名") nm="";
+        const sales=num(r[sc]), pay=num(r[sc+1]), gross=num(r[sc+2]);
+        if(!nm && !sales && !pay && !gross) return; // 完全空きスロット
+        const nx=sr[i+1]||[];
+        const isCnt=typeof nx[sc-1]==="string"&&nx[sc-1].indexOf("新規")>=0;
+        slots.push({day, sl, bi, name:nm, sales, pay, gross,
+          nw:isCnt?cnt(nx[sc]):0, rep:isCnt?cnt(nx[sc+1]):0, shimei:isCnt?cnt(nx[sc+2]):0});
+      });
+    }
+    // ---- Pass2: 名前未記入スロットを補完 ----
+    // 優先順: 1)同日同部屋の別番の名前(通し勤務) 2)管理シフトの同枠 3)管理シフトの別番 4)"(未記入)"
+    let resolved=0, unresolved=0;
+    const shiftNew=[];
+    slots.forEach(s=>{
+      let nm=s.name, est="";
+      if(!nm){
+        if(!s.sales && !s.pay && !s.gross) return; // 名前も実績も無し
+        // 同日同部屋の別番に「名前のみ(売上ゼロ)」の行がある場合のみ同一人物の通し勤務とみなす
+        // (別番に自分の売上がある場合は別人の可能性が高く、誤帰属になるため適用しない)
+        const other=slots.find(o=>o.day===s.day && o.bi===s.bi && o.sl!==s.sl && o.name && !/ダミー/.test(o.name) && !o.sales && !o.pay && !o.gross);
+        if(other){ nm=other.name; est="同日通し勤務から推定"; }
+        if(!nm && kanri){
+          nm=kanri[s.day+"|"+roomKeys[s.bi]+"|"+s.sl]||"";
+          if(nm) est="管理シフトから補完";
+        }
+        if(nm) resolved++; else { nm="(未記入)"; est="名前未記入"; unresolved++; }
+      }
+      if(/ダミー/.test(nm)&&!s.sales) return;
+      const t=findTherapist(nm);
+      shiftNew.push({date:ym+"-"+String(s.day).padStart(2,"0"), store:p.store, room:rooms[s.bi]||"", shift:s.sl,
+        therapist:t?t.name:nm, est, sales:s.sales, payment:s.pay, gross:s.gross, nw:s.nw, rep:s.rep, shimei:s.shimei, rawId:raw.id});
+    });
+    S.shift=S.shift.filter(d=>!(d.store===p.store && d.date.slice(0,7)===ym));
+    S.shift.push(...shiftNew); sCnt+=shiftNew.length;
+    p._resolved=resolved; p._unresolved=unresolved;
+  });
+  raw.status="取込済"; save();
+  const rsv=pairs.reduce((a,p)=>a+(p._resolved||0),0), urs=pairs.reduce((a,p)=>a+(p._unresolved||0),0);
+  $("xlMonthlyInfo").innerHTML="✅ 取込完了: 日次実績 "+dCnt+"行 / 個人別シフト "+sCnt+"行 ("+[...months].join(", ")+")。"
+    +(rsv?"<br>👤 名前未記入 "+rsv+"枠を通し勤務/管理シフトから自動補完しました。":"")
+    +(urs?"<br>⚠ "+urs+"枠は名前を特定できず「(未記入)」として取込みました (個人別実績タブで確認可)。":"")
+    +"<br>同じ店舗・月の再取込は自動で上書きされます。ダッシュボードに反映済み。";
+  toast("月次売上表を取込: 日次"+dCnt+"行 / 個人別"+sCnt+"行");
+}
+function genExcelPrompt(){
+  const rows=xlRows();
+  if(!rows.length){ toast("先にExcel/CSVを選択してください"); return; }
+  const recv=$("recvDate").value||todayStr();
+  const raw=saveRaw("(Excel AI) "+XL.name+" / "+$("xlSheet").value, $("reporter").value, "Excel+AI"); save();
+  const csv=rows.slice(0,150).map(r=>(r||[]).slice(0,20).map(c=>{ const s=xlCellStr(c); return /[,"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\n");
+  const p=`あなたはメンズエステ店舗(ザ・リッツ蒲田 / スパラウンジ大井町 / 巣鴨)の売上データを構造化するAIです。
+以下はExcelシートをCSV化したものです。フォーマットは不定で、ヘッダ位置や列構成が崩れている可能性があります。
+1予約(または1日1セラピスト分の売上行)=1要素として予約売上データ(JSON)に変換してください。
+
+# ルール
+- 原文にない情報を確定値として補完しない。推定は inferred_fields に列挙、不明は null
+- 合計行・小計行・空行は除外する
+- 日付が「6/12」形式で年が無い場合は${recv.slice(0,4)}年とする
+- 日次集計行(セラピスト不明で売上のみ)は therapist_raw を null とし anomalies に「日次集計行」と記載
+- 金額がコース料金マスタと矛盾する場合は anomalies に記載
+- 信頼度 confidence を0〜100で付け、人間確認が必要なら review_required=true
+- 出力はJSONのみ
+
+# マスタ
+${JSON.stringify(mastersForPrompt(), null, 1)}
+
+# 出力スキーマ
+{"raw_id":"${raw.id}","reservations":[{"date":"YYYY-MM-DD","store":"蒲田|大井町|巣鴨|null","therapist_raw":"...","therapist":"正規名orNull","start_time":"HH:MM|null","course_minutes":120,"sales_amount":18000,"therapist_payment":10000,"discount":null,"customer_type":"新規|再来|null","nomination":"Y|N|不明","source":"...","status":"来店済|予約済|キャンセル","inferred_fields":[],"missing_fields":[],"anomalies":[],"confidence":95,"review_required":false}]}
+
+# データ (${esc(XL.name)} / シート: ${$("xlSheet").value})
+${csv}`;
+  copyText(p, ()=>{ $("genMsg3").textContent="✓ コピーしました。Claudeに貼り、返ってきたJSONを上の「AI結果を取込」欄へ (raw_id: "+raw.id+")"; toast("Excel用AIプロンプトをコピーしました"); });
+}
+
+/* ================= 確認キュー ================= */
+function queueFieldEditor(r, i){
+  const stores=S.masters.stores.map(s=>'<option'+(s.name===r.store?' selected':'')+'>'+esc(s.name)+'</option>').join("");
+  const thers=S.masters.therapists.map(t=>'<option'+(t.name===r.therapist?' selected':'')+'>'+esc(t.name)+'</option>').join("");
+  const opt=(list,v)=>list.map(x=>'<option'+(x===v?' selected':'')+'>'+x+'</option>').join("");
+  return `<div class="fgrid">
+    <div><label>日付</label><input type="date" id="q${i}_date" value="${r.date||""}"></div>
+    <div><label>店舗</label><select id="q${i}_store"><option value=""></option>${stores}</select></div>
+    <div><label>セラピスト</label><select id="q${i}_ther"><option value="">${esc(r.therapist_raw&&!S.masters.therapists.some(t=>t.name===r.therapist)?r.therapist_raw+" (未登録)":"")}</option>${thers}</select></div>
+    <div><label>時刻</label><input type="time" id="q${i}_start" value="${r.start||""}"></div>
+    <div><label>コース分</label><input type="number" id="q${i}_min" value="${r.minutes!=null?r.minutes:""}"></div>
+    <div><label>売上${r.sales==null&&fillable(r).sales!=null?' (料金マスタ補完)':''}</label><input type="number" id="q${i}_sales" value="${r.sales!=null?r.sales:(fillable(r).sales!=null?fillable(r).sales:"")}"></div>
+    <div><label>取り分</label><input type="number" id="q${i}_pay" value="${r.payment!=null?r.payment:""}"></div>
+    <div><label>顧客種別</label><select id="q${i}_cust">${opt(["新規","再来","不明"], r.custType||"不明")}</select></div>
+    <div><label>指名</label><select id="q${i}_nom">${opt(["Y","N","不明"], r.nomination)}</select></div>
+    <div><label>流入元</label><select id="q${i}_src">${opt(SOURCES, r.source||"不明")}</select></div>
+    <div><label>状態</label><select id="q${i}_status">${opt(["来店済","予約済","キャンセル"], r.status)}</select></div>
+  </div>`;
+}
+function fillable(r){
+  const ther=r.therapist||r.therapist_raw;
+  const sales=r.sales!=null?r.sales:((r.store&&r.minutes&&S.masters.courses[r.store]&&S.masters.courses[r.store][String(r.minutes)]!=null)?S.masters.courses[r.store][String(r.minutes)]:null);
+  return {ok: !!(r.date&&r.store&&ther&&sales!=null), ther, sales};
+}
+function autoRegisterTher(name, store){
+  if(!name) return;
+  name=String(name).trim();
+  if(!name||findTherapist(name)) return;
+  S.masters.therapists.push({name, aliases:[], store:store||""});
+}
+function bulkApprove(){
+  let ok=0, ng=0;
+  S.queue=S.queue.filter(r=>{
+    const fl=fillable(r);
+    if(!fl.ok){ ng++; return true; }
+    r.therapist=fl.ther; r.sales=fl.sales;
+    if(r.payment==null) r.payment=Math.round(r.sales*S.masters.payRate);
+    if(!r.custType) r.custType="不明";
+    autoRegisterTher(r.therapist, r.store);
+    r.conf=Math.max(r.conf||0,85);
+    commitToDb(r,true); ok++; return false;
+  });
+  save(); renderQueue();
+  toast("一括承認 "+ok+"件 / 手修正が必要な残り "+ng+"件");
+}
+function bulkReject(){
+  if(!confirm("確認キューを全件却下しますか? (原文はRawログに残ります)")) return;
+  S.queue.forEach(r=>{ const raw=S.raws.find(x=>x.id===r.rawId); if(raw) raw.status="却下"; });
+  S.queue=[]; save(); renderQueue();
+}
+function renderQueue(){
+  const list=$("queueList");
+  if(!S.queue.length){ list.innerHTML='<div class="panel empty">✅ 確認待ちはありません</div>'; updateBadges(); return; }
+  const okN=S.queue.filter(r=>fillable(r).ok).length;
+  const bulkBar='<div class="panel"><div class="row">'+
+    '<button class="btn grn" onclick="bulkApprove()">✓ 一括承認 ('+okN+'/'+S.queue.length+'件)</button>'+
+    '<button class="btn dng sm" onclick="bulkReject()">全件却下</button>'+
+    '<span style="font-size:11.5px;color:var(--sub)">日付/店舗/セラピスト/売上(コース料金で自動補完)が揃うものを一括登録。未登録セラピストはマスタへ自動追加。金額矛盾など'+(S.queue.length-okN)+'件は個別修正が必要です。</span></div></div>';
+  list.innerHTML = bulkBar + S.queue.map((r,i)=>{
+    const raw=S.raws.find(x=>x.id===r.rawId);
+    const iss=[].concat((r.missing||[]).map(x=>"❓ 不足: "+x), (r.anomalies||[]).map(x=>"⚠ "+x), (r.inferred||[]).map(x=>"💡 推定: "+x));
+    return `<div class="qcard">
+      <div class="row"><span class="tag gy">${esc(r.id)}</span><span class="tag bl">${esc(r.rawId||"")}</span>${confBadge(r.conf||0)}
+      ${r.totalSales?'<span class="tag vi">合計'+yen(r.totalSales)+'円 / '+r.groupSize+'本の内訳要確認</span>':""}</div>
+      ${raw?'<div class="raw">'+esc(raw.text)+'</div>':""}
+      ${iss.length?'<div class="issues">'+iss.map(esc).join("<br>")+'</div>':""}
+      ${queueFieldEditor(r,i)}
+      <div class="row">
+        <button class="btn grn sm" onclick="approveQueue(${i})">✓ 承認して取込</button>
+        <button class="btn dng sm" onclick="rejectQueue(${i})">却下</button>
+      </div>
+    </div>`;
+  }).join("");
+  updateBadges();
+}
+function approveQueue(i){
+  const r=S.queue[i];
+  const v=k=>$("q"+i+"_"+k).value;
+  r.date=v("date")||null; r.store=v("store")||null; r.therapist=v("ther")||r.therapist_raw||null;
+  r.start=v("start")||null; r.minutes=v("min")?+v("min"):null; r.sales=v("sales")?+v("sales"):null;
+  r.payment=v("pay")?+v("pay"):null; r.custType=v("cust"); r.nomination=v("nom"); r.source=v("src"); r.status=v("status");
+  if(!r.date||!r.store||!r.therapist||r.sales==null){ toast("日付・店舗・セラピスト・売上は必須です"); return; }
+  if(r.payment==null) r.payment=Math.round(r.sales*S.masters.payRate);
+  autoRegisterTher(r.therapist, r.store);
+  r.conf=100; r.anomalies=[]; r.missing=[];
+  commitToDb(r, true);
+  S.queue.splice(i,1); save(); renderQueue(); toast("取込しました");
+}
+function rejectQueue(i){
+  const r=S.queue.splice(i,1)[0];
+  const raw=S.raws.find(x=>x.id===r.rawId); if(raw && !S.queue.some(q=>q.rawId===r.rawId)) raw.status="却下";
+  save(); renderQueue(); toast("却下しました (原文はRawログに残ります)");
+}
+function updateBadges(){
+  const b=$("bdgQueue"); if(!b) return;
+  b.style.display=S.queue.length?"block":"none"; b.textContent=S.queue.length;
+}
+
+/* ================= データベース ================= */
+function dbView(v, btn){
+  document.querySelectorAll("#tab-db .subtabs button").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
+  $("dbResView").style.display = v==="res"?"block":"none";
+  $("dbDailyView").style.display = v==="daily"?"block":"none";
+  $("dbShiftView").style.display = v==="shift"?"block":"none";
+  $("dbRawView").style.display = v==="raw"?"block":"none";
+  if(v==="raw") renderRaw(); else if(v==="daily") renderDaily(); else if(v==="shift") renderShift(); else renderDb();
+}
+function renderDaily(){
+  const rows=[...S.daily].sort((a,b)=>b.date.localeCompare(a.date)||a.store.localeCompare(b.store));
+  $("dailyTable").innerHTML = rows.length ? '<table><tr><th>日付</th><th>店舗</th><th class="num">売上</th><th class="num">取り分</th><th class="num">粗利</th><th class="num">予算</th><th class="num">客単価</th><th class="num">新規</th><th class="num">顧客</th><th class="num">指名</th><th class="num">本数</th></tr>'+
+    rows.map(d=>'<tr><td>'+d.date+'</td><td>'+esc(d.store)+'</td><td class="num">'+yen(d.sales)+'</td><td class="num">'+yen(d.payment)+'</td><td class="num">'+yen(d.gross)+'</td><td class="num">'+yen(d.budget)+'</td><td class="num">'+yen(d.avgPrice)+'</td><td class="num">'+d.nw+'</td><td class="num">'+d.rep+'</td><td class="num">'+d.shimei+'</td><td class="num">'+(d.nw+d.rep+d.shimei)+'</td></tr>').join("")+'</table>'
+    : '<div class="empty">Excel月次データはまだ取り込まれていません (取込タブ③で月次売上表を選択)</div>';
+}
+function renderShift(){
+  const rows=[...S.shift].sort((a,b)=>b.date.localeCompare(a.date)||a.store.localeCompare(b.store)).slice(0,500);
+  $("shiftTable").innerHTML = rows.length ? '<table><tr><th>日付</th><th>店舗</th><th>部屋</th><th>番</th><th>セラピスト</th><th class="num">売上</th><th class="num">取り分</th><th class="num">粗利</th><th class="num">新規</th><th class="num">顧客</th><th class="num">指名</th></tr>'+
+    rows.map(d=>'<tr><td>'+d.date+'</td><td>'+esc(d.store)+'</td><td style="font-size:10.5px">'+esc(d.room)+'</td><td>'+esc(d.shift)+'</td><td><b>'+esc(d.therapist)+'</b>'+(d.est?' <span class="tag '+(d.est==="名前未記入"?"rd":"am")+'" title="'+esc(d.est)+'" style="font-size:9.5px">'+(d.est==="名前未記入"?"未記入":"補完")+'</span>':"")+'</td><td class="num">'+yen(d.sales)+'</td><td class="num">'+yen(d.payment)+'</td><td class="num">'+yen(d.gross)+'</td><td class="num">'+d.nw+'</td><td class="num">'+d.rep+'</td><td class="num">'+d.shimei+'</td></tr>').join("")+'</table>'+(S.shift.length>500?'<div class="desc" style="padding:8px">先頭500行のみ表示 (全'+S.shift.length+'行)</div>':"")
+    : '<div class="empty">シフト個人別データはまだ取り込まれていません</div>';
+}
+function filteredDb(){
+  const f={from:$("fFrom").value, to:$("fTo").value, store:$("fStore").value, ther:$("fTher").value, st:$("fStatus").value};
+  return S.db.filter(d=>
+    (!f.from||(d.date&&d.date>=f.from)) && (!f.to||(d.date&&d.date<=f.to)) &&
+    (!f.store||d.store===f.store) && (!f.ther||d.therapist===f.ther) && (!f.st||d.status===f.st)
+  ).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.id.localeCompare(a.id)));
+}
+function renderDb(){
+  const rows=filteredDb();
+  let h='<table><tr><th>ID</th><th>日付</th><th>店舗</th><th>セラピスト</th><th>時刻</th><th>分</th><th class="num">売上</th><th class="num">取り分</th><th class="num">粗利</th><th>顧客</th><th>指名</th><th>流入</th><th>状態</th><th>信頼</th><th>確認</th><th>元報告</th><th></th></tr>';
+  rows.forEach(d=>{
+    h+=`<tr><td style="font-size:10.5px;color:var(--sub)">${esc(d.id)}</td><td>${fmtD(d.date)}</td><td>${esc(d.store)}</td><td>${esc(d.therapist)}</td><td>${d.start||"-"}</td><td>${d.minutes||"-"}</td>
+    <td class="num">${yen(d.sales)}</td><td class="num">${yen(d.payment)}</td><td class="num">${yen(d.gross)}</td>
+    <td>${esc(d.custType)}</td><td>${esc(d.nomination)}</td><td>${esc(d.source)}</td>
+    <td>${d.status==="キャンセル"?'<span class="tag rd">キャンセル</span>':d.status==="予約済"?'<span class="tag bl">予約済</span>':'<span class="tag gn">来店済</span>'}</td>
+    <td>${d.conf}</td><td>${d.reviewed?"👤":"🤖"}</td>
+    <td><a href="#" style="font-size:11px" onclick="showRawOf('${esc(d.rawId)}');return false">${esc(d.rawId||"-")}</a></td>
+    <td><button class="btn sm" onclick="editRec('${d.id}')">✎</button> <button class="btn sm dng" onclick="delRec('${d.id}')">✕</button></td></tr>`;
+  });
+  h+='</table>';
+  $("dbTable").innerHTML = rows.length?h:'<div class="empty">データがありません。取込タブから登録してください。</div>';
+  const act=rows.filter(d=>d.status!=="キャンセル");
+  const tot=act.reduce((a,d)=>a+d.sales,0), gr=act.reduce((a,d)=>a+d.gross,0);
+  $("dbSummary").textContent = `表示 ${rows.length}件 / 有効${act.length}本 / 売上 ${yen(tot)}円 / 粗利 ${yen(gr)}円`;
+  refreshFilterOptions();
+}
+function refreshFilterOptions(){
+  const so=['<option value="">全店</option>'].concat(S.masters.stores.map(s=>'<option>'+esc(s.name)+'</option>'));
+  const cur=$("fStore").value; $("fStore").innerHTML=so.join(""); $("fStore").value=cur;
+  const names=[...new Set(S.db.map(d=>d.therapist))].sort();
+  const cur2=$("fTher").value;
+  $("fTher").innerHTML='<option value="">全員</option>'+names.map(n=>'<option>'+esc(n)+'</option>').join(""); $("fTher").value=cur2;
+  const so2=['<option value="">全店</option>'].concat(S.masters.stores.map(s=>'<option>'+esc(s.name)+'</option>'));
+  const cur3=$("dashStore").value; $("dashStore").innerHTML=so2.join(""); $("dashStore").value=cur3;
+}
+function clearFilter(){ ["fFrom","fTo","fStore","fTher","fStatus"].forEach(i=>$(i).value=""); renderDb(); }
+function delRec(id){
+  if(!confirm("削除しますか? (元のRaw原文は残ります)")) return;
+  S.db=S.db.filter(d=>d.id!==id); save(); renderDb();
+}
+function editRec(id){
+  const d=S.db.find(x=>x.id===id); if(!d) return;
+  const opt=(list,v)=>list.map(x=>'<option'+(x===v?' selected':'')+'>'+x+'</option>').join("");
+  $("modalBody").innerHTML=`<h3>レコード編集 ${esc(id)}</h3><div class="fgrid">
+    <div><label>日付</label><input type="date" id="e_date" value="${d.date||""}"></div>
+    <div><label>店舗</label><select id="e_store">${opt(S.masters.stores.map(s=>s.name),d.store)}</select></div>
+    <div><label>セラピスト</label><input id="e_ther" value="${esc(d.therapist)}"></div>
+    <div><label>時刻</label><input type="time" id="e_start" value="${d.start||""}"></div>
+    <div><label>分</label><input type="number" id="e_min" value="${d.minutes||""}"></div>
+    <div><label>売上</label><input type="number" id="e_sales" value="${d.sales}"></div>
+    <div><label>取り分</label><input type="number" id="e_pay" value="${d.payment}"></div>
+    <div><label>顧客</label><select id="e_cust">${opt(["新規","再来","不明"],d.custType)}</select></div>
+    <div><label>指名</label><select id="e_nom">${opt(["Y","N","不明"],d.nomination)}</select></div>
+    <div><label>流入</label><select id="e_src">${opt(SOURCES,d.source)}</select></div>
+    <div><label>状態</label><select id="e_status">${opt(["来店済","予約済","キャンセル"],d.status)}</select></div>
+  </div><div class="row"><button class="btn pri" onclick="saveEdit('${d.id}')">保存</button><button class="btn" onclick="closeModal()">閉じる</button></div>`;
+  $("modalBg").style.display="flex";
+}
+function saveEdit(id){
+  const d=S.db.find(x=>x.id===id); if(!d) return;
+  d.date=$("e_date").value; d.store=$("e_store").value; d.therapist=$("e_ther").value;
+  d.start=$("e_start").value||null; d.minutes=$("e_min").value?+$("e_min").value:null;
+  d.sales=+$("e_sales").value||0; d.payment=+$("e_pay").value||0; d.gross=d.sales-d.payment;
+  d.custType=$("e_cust").value; d.nomination=$("e_nom").value; d.source=$("e_src").value; d.status=$("e_status").value;
+  d.reviewed=true; save(); closeModal(); renderDb(); toast("更新しました");
+}
+function closeModal(){ $("modalBg").style.display="none"; }
+function showRawOf(rawId){
+  const raw=S.raws.find(r=>r.id===rawId);
+  $("modalBody").innerHTML='<h3>元報告 '+esc(rawId)+'</h3>'+(raw?'<div class="qcard"><div class="row"><span class="tag gy">'+esc(raw.via)+'</span><span class="tag bl">'+esc(raw.reporter)+'</span><span style="font-size:11px;color:var(--sub)">'+esc(raw.ts.slice(0,16).replace("T"," "))+'</span></div><div class="raw">'+esc(raw.text)+'</div></div>':'<div class="empty">原文が見つかりません</div>')+'<button class="btn" onclick="closeModal()">閉じる</button>';
+  $("modalBg").style.display="flex";
+}
+function renderRaw(){
+  const rows=[...S.raws].reverse();
+  let h='<table><tr><th>ID</th><th>受信日</th><th>報告者</th><th>入力元</th><th>原文</th><th>状態</th></tr>';
+  rows.forEach(r=>{
+    const tag=r.status==="取込済"?'<span class="tag gn">取込済</span>':r.status==="要確認"?'<span class="tag am">要確認</span>':r.status==="却下"?'<span class="tag rd">却下</span>':'<span class="tag gy">未処理</span>';
+    h+='<tr><td>'+esc(r.id)+'</td><td>'+esc(r.recv||r.ts.slice(0,10))+'</td><td>'+esc(r.reporter)+'</td><td>'+esc(r.via)+'</td><td style="white-space:pre-wrap;max-width:480px;font-size:11.5px">'+esc(r.text.slice(0,300))+'</td><td>'+tag+'</td></tr>';
+  });
+  h+='</table>';
+  $("rawTable").innerHTML=rows.length?h:'<div class="empty">Rawログはまだありません</div>';
+}
+/* --- CSV / バックアップ --- */
+function dl(name, content, mime){
+  const blob=new Blob([content],{type:mime||"text/plain"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+function exportCsv(){
+  const rows=filteredDb();
+  const head=["予約ID","日付","店舗","セラピスト","開始時刻","コース分数","総売上","取り分","粗利","顧客種別","指名区分","流入元","ステータス","AI信頼度","人間確認済","元raw_id"];
+  const csv="\uFEFF"+[head.join(",")].concat(rows.map(d=>[d.id,d.date,d.store,d.therapist,d.start||"",d.minutes||"",d.sales,d.payment,d.gross,d.custType,d.nomination,d.source,d.status,d.conf,d.reviewed?"Y":"N",d.rawId||""].map(v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"').join(","))).join("\r\n");
+  dl("予約売上DB_"+todayStr()+".csv", csv, "text/csv");
+}
+function exportBackup(){ dl("EstheOpsAI_backup_"+todayStr()+".json", JSON.stringify(S,null,1), "application/json"); }
+function importBackup(inp){
+  const f=inp.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=e=>{ try{ const j=JSON.parse(e.target.result); if(!j.db||!j.raws) throw new Error("形式不正"); S=j; save(); initAll(); toast("復元しました: "+S.db.length+"件"); }catch(err){ toast("復元失敗: "+err.message); } };
+  rd.readAsText(f); inp.value="";
+}
+function clearExcelLayers(){
+  if(!confirm("Excel月次取込データ(日次集計"+S.daily.length+"行 / 個人別"+S.shift.length+"行)を削除しますか? 予約売上DBは残ります。")) return;
+  S.daily=[]; S.shift=[]; save(); toast("削除しました");
+}
+function wipeAll(){
+  if(!confirm("全データ(DB/Raw/キュー/レポート/マスタ変更)を初期化します。よろしいですか?")) return;
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  S=loadState(); save(); initAll(); toast("初期化しました");
+}
+
+/* ================= ダッシュボード ================= */
+let dashPeriod="thisMonth";
+const charts={};
+function periodRange(p){
+  const t=todayStr(), d=new Date(t+"T00:00:00");
+  if(p==="thisMonth"){ return [t.slice(0,8)+"01", t]; }
+  if(p==="lastMonth"){ const f=new Date(d.getFullYear(), d.getMonth()-1, 1), e=new Date(d.getFullYear(), d.getMonth(), 0);
+    const iso=x=>x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");
+    return [iso(f), iso(e)]; }
+  if(p==="7d") return [addDays(t,-6), t];
+  if(p==="30d") return [addDays(t,-29), t];
+  return [null,null];
+}
+function setPeriod(btn){
+  document.querySelectorAll("#tab-dash .subtabs button").forEach(b=>b.classList.remove("on"));
+  btn.classList.add("on"); dashPeriod=btn.dataset.p; renderDash();
+}
+function dashData(){
+  const [f,to]=periodRange(dashPeriod), st=$("dashStore").value;
+  return S.db.filter(d=>d.date && d.status!=="キャンセル" && (!f||d.date>=f) && (!to||d.date<=to) && (!st||d.store===st));
+}
+function mkChart(id, cfg){
+  if(typeof Chart==="undefined") return; // CDN未読込(オフライン)時はグラフをスキップ
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart($(id), cfg);
+}
+const AXIS={ticks:{color:"#6b7488",font:{size:11}},grid:{color:"#eef0f6"}};
+function chartOpts(stacked, yFmt){
+  return {responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:"#374151",boxWidth:12,font:{size:11}}}},
+    scales:{x:Object.assign({stacked},JSON.parse(JSON.stringify(AXIS))),
+            y:Object.assign({stacked,beginAtZero:true},JSON.parse(JSON.stringify(AXIS)),{ticks:{color:"#6b7488",font:{size:11},callback:v=>yFmt?yFmt(v):v}})}};
+}
+const PALETTE=["#2563eb","#16a34a","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"];
+function renderDash(){
+  refreshFilterOptions();
+  const data=dashData(); // 予約粒度(LINE/手入力/Excel予約リスト)
+  const [f,to]=periodRange(dashPeriod);
+  const stSel=$("dashStore").value;
+  const stores=stSel?S.masters.stores.filter(s=>s.name===stSel):S.masters.stores;
+  // ---- 統合層: 同一店舗・同一日は予約DB優先、無い日はExcel日次集計で補完 (二重計上防止) ----
+  const rsvDays=new Set(data.map(d=>d.store+"|"+d.date));
+  const exDaily=S.daily.filter(d=>(!f||d.date>=f)&&(!to||d.date<=to)&&(!stSel||d.store===stSel)&&!rsvDays.has(d.store+"|"+d.date));
+  const dayMap={}; // "店舗|日付" -> 売上
+  data.forEach(d=>{ const k=d.store+"|"+d.date; dayMap[k]=(dayMap[k]||0)+d.sales; });
+  exDaily.forEach(d=>{ const k=d.store+"|"+d.date; dayMap[k]=(dayMap[k]||0)+d.sales; });
+  // ---- KPI ----
+  const tot=data.reduce((a,d)=>a+d.sales,0)+exDaily.reduce((a,d)=>a+d.sales,0);
+  const gross=data.reduce((a,d)=>a+d.gross,0)+exDaily.reduce((a,d)=>a+d.gross,0);
+  const exN=exDaily.reduce((a,d)=>a+d.nw+d.rep+d.shimei,0);
+  const n=data.length+exN, avg=n?Math.round(tot/n):0;
+  const nw=data.filter(d=>d.custType==="新規").length+exDaily.reduce((a,d)=>a+d.nw,0);
+  const rep=data.filter(d=>d.custType==="再来").length+exDaily.reduce((a,d)=>a+d.rep+d.shimei,0);
+  const nom=data.filter(d=>d.nomination==="Y").length+exDaily.reduce((a,d)=>a+d.shimei,0);
+  const cancels=S.db.filter(d=>d.status==="キャンセル"&&d.date&&(!f||d.date>=f)&&(!to||d.date<=to)&&(!stSel||d.store===stSel)).length;
+  // 目標 (期間日数で按分)
+  let target=0;
+  if(f&&to){
+    const days=(new Date(to)-new Date(f))/864e5+1;
+    stores.forEach(s=>{ const dim=new Date(new Date(to).getFullYear(), new Date(to).getMonth()+1, 0).getDate(); target+=s.target/dim*days; });
+  }
+  const prog=target?Math.round(tot/target*100):null;
+  const actDays=[...new Set(data.map(d=>d.date).concat(exDaily.filter(d=>d.sales>0).map(d=>d.date)))].length;
+  $("dashCards").innerHTML=[
+    ["総売上", yen(tot)+"円", actDays+"営業日 / 日販 "+yen(actDays?tot/actDays:0)+"円"+(exDaily.length?" / Excel補完"+[...new Set(exDaily.map(d=>d.date))].length+"日":"")],
+    ["粗利", yen(gross)+"円", "粗利率 "+(tot?Math.round(gross/tot*100):0)+"%"],
+    ["本数", n+"本", "客単価 "+yen(avg)+"円"],
+    ["新規", nw+"人", "新規率 "+(n?Math.round(nw/n*100):0)+"%"],
+    ["指名率", (n?Math.round(nom/n*100):0)+"%", nom+"本"],
+    ["再来率", (n?Math.round(rep/n*100):0)+"%", rep+"本"],
+    ["目標進捗", prog==null?"-":prog+"%", target?("期間目標 "+yen(target)+"円"):"全期間は目標非表示"],
+    ["キャンセル", cancels+"件", "確認待ち "+S.queue.length+"件"]
+  ].map(c=>'<div class="kpi"><div class="l">'+c[0]+'</div><div class="v">'+c[1]+'</div><div class="d">'+c[2]+'</div></div>').join("");
+  // ---- アラート ----
+  const alerts=[];
+  if(S.queue.length) alerts.push(["am","⏳ 確認キューに "+S.queue.length+" 件あります。承認するまで分析に反映されません。"]);
+  if(prog!=null && prog<90 && target>0) alerts.push(["rd","📉 期間目標に対し "+yen(target-tot)+"円 不足 (進捗"+prog+"%)。AI分析タブで未達要因と打ち手を出してください。"]);
+  if(prog!=null && prog>=100) alerts.push(["gn","🎉 期間目標を達成しています (進捗"+prog+"%)。"]);
+  const lowConf=data.filter(d=>d.conf<70 && !d.reviewed).length;
+  if(lowConf) alerts.push(["am","⚠ 信頼度70未満・未確認のレコードが "+lowConf+" 件。DBタブで確認推奨。"]);
+  $("dashAlerts").innerHTML=alerts.map(a=>'<div class="alertbox '+a[0]+'"><span>'+a[1]+'</span></div>').join("");
+  // ---- 日次推移 ----
+  const dates=[]; if(f&&to){ let g=0; for(let d=f; d<=to && g<400; d=addDays(d,1), g++) dates.push(d); }
+  else [...new Set(data.map(d=>d.date))].sort().forEach(d=>dates.push(d));
+  const dsets=stores.map((s,i)=>({label:s.name, stack:"a", backgroundColor:PALETTE[i],
+    data:dates.map(dt=>dayMap[s.name+"|"+dt]||0)}));
+  if(f&&to&&target){
+    const dailyTarget=target/dates.length;
+    dsets.push({label:"日次目標", type:"line", data:dates.map(()=>dailyTarget), borderColor:"#dc2626", borderDash:[6,4], pointRadius:0, borderWidth:1.5});
+  }
+  mkChart("cDaily",{type:"bar",data:{labels:dates.map(d=>+d.slice(5,7)+"/"+ +d.slice(8,10)),datasets:dsets},options:chartOpts(true,v=>(v/10000)+"万")});
+  // ---- 目標進捗バー ----
+  $("budgetBars").innerHTML=stores.map((s,i)=>{
+    const t=Object.keys(dayMap).filter(k=>k.split("|")[0]===s.name).reduce((a,k)=>a+dayMap[k],0);
+    let tg=0; if(f&&to){ const days=(new Date(to)-new Date(f))/864e5+1; const dim=new Date(new Date(to).getFullYear(),new Date(to).getMonth()+1,0).getDate(); tg=s.target/dim*days; }
+    const p=tg?Math.min(Math.round(t/tg*100),100):0;
+    return '<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><b>'+esc(s.name)+'</b><span>'+yen(t)+' / '+yen(tg)+'円 ('+(tg?Math.round(t/tg*100):0)+'%)</span></div><div style="background:#eef0f6;border-radius:6px;height:10px;overflow:hidden"><div style="height:100%;width:'+p+'%;background:'+PALETTE[S.masters.stores.indexOf(s)>=0?S.masters.stores.findIndex(x=>x.name===s.name):i]+';border-radius:6px"></div></div></div>';
+  }).join("")||'<div class="empty">店舗データなし</div>';
+  // ---- 曜日別 ----
+  const DOW=["日","月","火","水","木","金","土"];
+  const dowSets=stores.map((s,i)=>({label:s.name,backgroundColor:PALETTE[i],
+    data:[0,1,2,3,4,5,6].map(w=>{
+      const vals=Object.keys(dayMap).filter(k=>k.split("|")[0]===s.name)
+        .map(k=>({dt:k.split("|")[1], v:dayMap[k]}))
+        .filter(x=>new Date(x.dt+"T00:00:00").getDay()===w && x.v>0);
+      return vals.length?Math.round(vals.reduce((a,x)=>a+x.v,0)/vals.length):0;
+    })}));
+  mkChart("cDow",{type:"bar",data:{labels:DOW,datasets:dowSets},options:chartOpts(false,v=>(v/10000)+"万")});
+  // ---- コース構成 ----
+  const mins=[...new Set(data.map(d=>d.minutes).filter(Boolean))].sort((a,b)=>a-b);
+  mkChart("cCourse",{type:"doughnut",
+    data:{labels:mins.map(m=>m+"分").concat(data.some(d=>!d.minutes)?["不明"]:[]),
+      datasets:[{data:mins.map(m=>data.filter(d=>d.minutes===m).length).concat(data.some(d=>!d.minutes)?[data.filter(d=>!d.minutes).length]:[]),backgroundColor:PALETTE}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"#374151",boxWidth:12,font:{size:11}}}}}});
+  // ---- 流入元 ----
+  const srcs=[...new Set(data.map(d=>d.source))];
+  mkChart("cSource",{type:"bar",data:{labels:srcs,datasets:[{label:"売上",backgroundColor:PALETTE[0],data:srcs.map(s=>data.filter(d=>d.source===s).reduce((a,d)=>a+d.sales,0))}]},options:chartOpts(false,v=>(v/10000)+"万")});
+  // ---- 時間帯 ----
+  const hours=Array.from({length:16},(_,i)=>i+10);
+  mkChart("cHour",{type:"bar",data:{labels:hours.map(h=>h+"時"),datasets:[{label:"本数",backgroundColor:PALETTE[4],data:hours.map(h=>data.filter(d=>d.start&&+d.start.slice(0,2)===h).length)}]},options:chartOpts(false,null)});
+  // ---- 新規/再来 ----
+  mkChart("cCust",{type:"doughnut",data:{labels:["新規","再来","不明"],datasets:[{data:[nw,rep,n-nw-rep],backgroundColor:["#16a34a","#2563eb","#cbd5e1"]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{color:"#374151",boxWidth:12,font:{size:11}}}}}});
+  // ---- セラピストランキング ----
+  const byT={};
+  const tEnt=k=>byT[k]||(byT[k]={sales:0,n:0,nom:0,nw:0,days:new Set()});
+  data.forEach(d=>{ const t=tEnt(d.therapist); t.sales+=d.sales; t.n++; if(d.nomination==="Y")t.nom++; if(d.custType==="新規")t.nw++; t.days.add(d.date); });
+  // シフト個人別 (予約DBがカバーする店舗・日付は除外して二重計上防止)
+  S.shift.filter(d=>(!f||d.date>=f)&&(!to||d.date<=to)&&(!stSel||d.store===stSel)&&!rsvDays.has(d.store+"|"+d.date))
+    .forEach(d=>{ const t=tEnt(d.therapist); t.sales+=d.sales; t.n+=d.nw+d.rep+d.shimei; t.nom+=d.shimei; t.nw+=d.nw; t.days.add(d.date); });
+  const all=Object.keys(byT).map(k=>Object.assign({name:k},byT[k])).filter(t=>t.sales>0||t.days.size>0);
+  const unk=all.find(t=>t.name==="(未記入)");
+  const rank=all.filter(t=>t.name!=="(未記入)").sort((a,b)=>b.sales-a.sales);
+  const medals=["🥇","🥈","🥉"];
+  $("therRank").innerHTML = rank.length ? '<table><tr><th></th><th>セラピスト</th><th class="num">売上</th><th class="num">本数</th><th class="num">出勤日数</th><th class="num">売上/出勤</th><th class="num">指名率</th><th class="num">新規</th><th class="num">客単価</th></tr>'+
+    rank.map((t,i)=>'<tr><td>'+(medals[i]||(i+1))+'</td><td><b>'+esc(t.name)+'</b></td><td class="num">'+yen(t.sales)+'</td><td class="num">'+t.n+'</td><td class="num">'+t.days.size+'</td><td class="num">'+yen(t.days.size?t.sales/t.days.size:0)+'</td><td class="num">'+(t.n?Math.round(t.nom/t.n*100):0)+'%</td><td class="num">'+t.nw+'</td><td class="num">'+yen(t.n?t.sales/t.n:0)+'</td></tr>').join("")+'</table>'
+    +(unk?'<div class="alertbox am" style="margin-top:10px">⚠ セラピスト名が特定できない売上が <b>'+yen(unk.sales)+'円</b> あります (シフト表の名前未記入'+unk.days.size+'日分)。ランキングには含めていません。現場に名前の記入を徹底させると個人別分析の精度が上がります。</div>':"")
+    : '<div class="empty">データなし</div>';
+}
+
+/* ================= AI分析 ================= */
+function aggregateFor(period){
+  const [f,to]=periodRange(period);
+  const data=S.db.filter(d=>d.date&&d.status!=="キャンセル"&&(!f||d.date>=f)&&(!to||d.date<=to));
+  const grp=(arr,key)=>{ const o={}; arr.forEach(d=>{ const k=d[key]||"不明"; const g=o[k]||(o[k]={売上:0,本数:0,新規:0,指名:0}); g.売上+=d.sales; g.本数++; if(d.custType==="新規")g.新規++; if(d.nomination==="Y")g.指名++; }); return o; };
+  const byDate={}; data.forEach(d=>{ const g=byDate[d.date]||(byDate[d.date]={売上:0,本数:0}); g.売上+=d.sales; g.本数++; });
+  const byHour={}; data.forEach(d=>{ if(d.start){ const h=d.start.slice(0,2)+"時"; byHour[h]=(byHour[h]||0)+1; } });
+  // Excel日次集計層 (予約データがある店舗・日は除外して二重計上防止)
+  const rsvDays=new Set(data.map(d=>d.store+"|"+d.date));
+  const exDaily=S.daily.filter(d=>(!f||d.date>=f)&&(!to||d.date<=to)&&!rsvDays.has(d.store+"|"+d.date));
+  const exByStore={};
+  exDaily.forEach(d=>{ const g=exByStore[d.store]||(exByStore[d.store]={売上:0,粗利:0,本数:0,新規:0,再来:0,指名:0,営業日:0}); g.売上+=d.sales; g.粗利+=d.gross; g.本数+=d.nw+d.rep+d.shimei; g.新規+=d.nw; g.再来+=d.rep+d.shimei; g.指名+=d.shimei; if(d.sales>0)g.営業日++; });
+  // シフト個人別層
+  const exShift=S.shift.filter(d=>(!f||d.date>=f)&&(!to||d.date<=to)&&!rsvDays.has(d.store+"|"+d.date));
+  const byTher={};
+  exShift.forEach(d=>{ const g=byTher[d.therapist]||(byTher[d.therapist]={店舗:d.store,売上:0,出勤:new Set(),新規:0,再来:0,指名:0}); g.売上+=d.sales; g.出勤.add(d.date); g.新規+=d.nw; g.再来+=d.rep; g.指名+=d.shimei; });
+  data.forEach(d=>{ const g=byTher[d.therapist]||(byTher[d.therapist]={店舗:d.store,売上:0,出勤:new Set(),新規:0,再来:0,指名:0}); g.売上+=d.sales; g.出勤.add(d.date); if(d.custType==="新規")g.新規++; if(d.custType==="再来")g.再来++; if(d.nomination==="Y")g.指名++; });
+  const 個人別統合=Object.fromEntries(Object.entries(byTher).map(([k,v])=>[k,{店舗:v.店舗,売上:v.売上,出勤日数:v.出勤.size,売上per出勤:v.出勤.size?Math.round(v.売上/v.出勤.size):0,新規:v.新規,再来:v.再来,指名:v.指名}]));
+  const rsvTot=data.reduce((a,d)=>a+d.sales,0), exTot=exDaily.reduce((a,d)=>a+d.sales,0);
+  const totN=data.length+exDaily.reduce((a,d)=>a+d.nw+d.rep+d.shimei,0);
+  return {
+    期間:{from:f,to:to},
+    統合KPI:{総売上:rsvTot+exTot, 総粗利:data.reduce((a,d)=>a+d.gross,0)+exDaily.reduce((a,d)=>a+d.gross,0), 本数:totN,
+      客単価:totN?Math.round((rsvTot+exTot)/totN):0,
+      新規数:data.filter(d=>d.custType==="新規").length+exDaily.reduce((a,d)=>a+d.nw,0),
+      指名本数:data.filter(d=>d.nomination==="Y").length+exDaily.reduce((a,d)=>a+d.shimei,0),
+      内訳:{予約粒度データ:rsvTot, Excel日次集計:exTot}},
+    キャンセル数:S.db.filter(d=>d.status==="キャンセル"&&d.date&&(!f||d.date>=f)&&(!to||d.date<=to)).length,
+    月次目標:Object.fromEntries(S.masters.stores.map(s=>[s.name,s.target])),
+    店舗別_予約粒度:grp(data,"store"), 店舗別_Excel日次:exByStore,
+    セラピスト別統合:個人別統合, 流入元別:grp(data,"source"),
+    コース別本数:Object.fromEntries([...new Set(data.map(d=>d.minutes||"不明"))].map(m=>[m+"分",data.filter(d=>(d.minutes||"不明")===m).length])),
+    日別_予約粒度:byDate, 日別_Excel:Object.fromEntries(exDaily.filter(d=>d.sales>0).map(d=>[d.date+" "+d.store,{売上:d.sales,本数:d.nw+d.rep+d.shimei,新規:d.nw,指名:d.shimei,客単価:d.avgPrice}])),
+    時間帯別本数:byHour,
+    データ注記:"流入元・コース・時間帯は予約粒度データのみ。Excel日次集計層は店舗日次合計と新規/顧客(再来)/指名の内訳。セラピスト別統合はシフト個人別+予約データを二重計上なしで合算。「(未記入)」はシフト表に名前が書かれていなかった売上で、存在する場合は記入運用の改善を提言すること。"
+  };
+}
+const AI_TYPES={
+  daily:"日次/期間サマリ分析。1)実績と目標差分 2)未達/超過の主因を数値で特定(店舗別・時間帯の空き・客単価・新規/再来構成) 3)明日からの具体的打ち手を3〜5個(投稿すべき空き枠時間帯、訴求すべきコース、LINE配信対象など)",
+  therapist:"セラピスト別分析。売上/客単価/指名率/新規獲得の観点で各人の強み弱みを特定し、個別の改善アクション(単価アップ余地、指名化施策、出勤最適化)を提示",
+  source:"流入元/媒体分析。媒体別の売上貢献・新規獲得効率を評価し、広告費配分の見直し案(増額/減額すべき媒体)を提示。不明が多い場合は計測改善策も",
+  crm:"リピート/CRM分析。新規率・再来率・指名率から顧客定着の健全性を診断し、再来促進のLINE施策(配信対象セグメント・タイミング・文面方針)を提示"
+};
+function genAnalysisPrompt(){
+  const period=$("aiPeriod").value, type=$("aiType").value;
+  const agg=aggregateFor(period);
+  if(!agg.統合KPI.本数 && !agg.統合KPI.総売上){ toast("対象期間にデータがありません"); return; }
+  const p=`あなたはメンズエステ店舗(ザ・リッツ蒲田 / スパラウンジ大井町 / 巣鴨)の経営コンサルタントAIです。
+以下の集計データを分析し、Markdownでレポートを作成してください。
+
+# 分析タイプ
+${AI_TYPES[type]}
+
+# 前提
+- 月次目標: ${S.masters.stores.map(s=>s.name+" "+yen(s.target)+"円").join(" / ")}
+- 取り分率の目安: ${Math.round(S.masters.payRate*100)}% (粗利率 約${Math.round((1-S.masters.payRate)*100)}%)
+- コース料金: ${JSON.stringify(S.masters.courses)}
+- 全店で部屋数は限られる(蒲田2/大井町2/巣鴨2)。稼働率と単価の両輪で考えること
+
+# ルール
+- 必ず数値を根拠にする。データにない数値を捏造しない
+- データ量が少ない場合は「サンプル不足」と明記し、断定を避ける
+- 打ち手は「明日から実行可能」なレベルまで具体化する
+- 構成: 1.サマリ 2.要因分析 3.打ち手(優先度順) 4.計測すべき追加データ
+
+# 集計データ(JSON)
+${JSON.stringify(agg, null, 1)}`;
+  copyText(p, ()=>{ $("genMsg2").textContent="✓ コピーしました。Claudeに貼り付けてください"; toast("分析プロンプトをコピーしました"); });
+}
+function mdToHtml(md){
+  let h=esc(md);
+  // テーブル
+  h=h.replace(/((?:^\|.*\|\s*$\n?)+)/gm, block=>{
+    const lines=block.trim().split("\n").filter(l=>!/^\|[\s:|-]+\|$/.test(l));
+    return '<table>'+lines.map((l,i)=>{ const cells=l.replace(/^\||\|$/g,"").split("|"); const tag=i===0?"th":"td"; return "<tr>"+cells.map(c=>"<"+tag+">"+c.trim()+"</"+tag+">").join("")+"</tr>"; }).join("")+'</table>';
+  });
+  h=h.replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>");
+  h=h.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+  h=h.replace(/`([^`]+)`/g,"<code>$1</code>");
+  h=h.replace(/((?:^[-*] .*$\n?)+)/gm, b=>"<ul>"+b.trim().split("\n").map(l=>"<li>"+l.replace(/^[-*] /,"")+"</li>").join("")+"</ul>");
+  h=h.replace(/((?:^\d+\. .*$\n?)+)/gm, b=>"<ol>"+b.trim().split("\n").map(l=>"<li>"+l.replace(/^\d+\. /,"")+"</li>").join("")+"</ol>");
+  h=h.replace(/\n{2,}/g,"<br><br>").replace(/\n/g,"<br>");
+  return h;
+}
+function saveReport(){
+  const md=$("aiReportIn").value.trim();
+  if(!md){ toast("レポートを貼り付けてください"); return; }
+  S.reports.unshift({ts:new Date().toISOString(), period:$("aiPeriod").selectedOptions[0].textContent, type:$("aiType").selectedOptions[0].textContent, md});
+  save(); $("aiReportIn").value=""; renderReports(); toast("保存しました");
+}
+function renderReports(){
+  $("reportList").innerHTML = S.reports.length ? S.reports.map((r,i)=>
+    `<div class="panel"><div class="row" style="margin-bottom:8px"><span class="tag vi">${esc(r.type)}</span><span class="tag gy">${esc(r.period)}</span><span style="font-size:11px;color:var(--sub)">${esc(r.ts.slice(0,16).replace("T"," "))}</span><span style="flex:1"></span><button class="btn sm dng" onclick="delReport(${i})">削除</button></div><div class="md">${mdToHtml(r.md)}</div></div>`
+  ).join("") : '<div class="panel empty">保存済みレポートはありません</div>';
+}
+function delReport(i){ S.reports.splice(i,1); save(); renderReports(); }
+
+/* ================= マスタ設定 ================= */
+function renderMasters(){
+  const m=S.masters;
+  $("mstStores").innerHTML='<table><tr><th>店舗</th><th>別名(カンマ区切り)</th><th>月次目標(円)</th></tr>'+
+    m.stores.map((s,i)=>`<tr><td><b>${esc(s.name)}</b></td><td><input style="width:100%" value="${esc((s.aliases||[]).join(","))}" onchange="updStore(${i},'aliases',this.value)"></td><td><input type="number" style="width:110px" value="${s.target}" onchange="updStore(${i},'target',this.value)"></td></tr>`).join("")+'</table>';
+  const MINS=["60","90","120","150","180"];
+  $("mstCourses").innerHTML='<table><tr><th>店舗</th>'+MINS.map(x=>'<th>'+x+'分</th>').join("")+'</tr>'+
+    m.stores.map(s=>'<tr><td><b>'+esc(s.name)+'</b></td>'+MINS.map(x=>'<td><input type="number" style="width:78px" value="'+(m.courses[s.name]&&m.courses[s.name][x]!=null?m.courses[s.name][x]:"")+'" onchange="updCourse(\''+esc(s.name)+'\',\''+x+'\',this.value)"></td>').join("")+'</tr>').join("")+'</table>';
+  $("mstTher").innerHTML='<div class="tbl-wrap"><table><tr><th>名前</th><th>別名(カンマ区切り)</th><th>主店舗</th><th></th></tr>'+
+    m.therapists.map((t,i)=>`<tr><td><b>${esc(t.name)}</b></td><td><input style="width:100%" value="${esc((t.aliases||[]).join(","))}" onchange="updTher(${i},'aliases',this.value)"></td><td><select onchange="updTher(${i},'store',this.value)"><option value=""></option>${m.stores.map(s=>'<option'+(s.name===t.store?' selected':'')+'>'+esc(s.name)+'</option>').join("")}</select></td><td><button class="btn sm dng" onclick="delTher(${i})">✕</button></td></tr>`).join("")+'</table></div>';
+  $("newTherStore").innerHTML=m.stores.map(s=>'<option>'+esc(s.name)+'</option>').join("");
+  $("mstRules").innerHTML=`<table>
+    <tr><td>自動取込しきい値 (信頼度)</td><td><input type="number" min="0" max="100" style="width:80px" value="${m.autoThreshold}" onchange="S.masters.autoThreshold=+this.value;save()"> 以上で自動取込</td></tr>
+    <tr><td>取り分率 (推定用)</td><td><input type="number" min="0" max="100" style="width:80px" value="${Math.round(m.payRate*100)}" onchange="S.masters.payRate=(+this.value)/100;save()"> %</td></tr>
+  </table><div class="help">運用初期はしきい値90以上を推奨。AIの精度が安定したら85まで下げてください。<br>信頼度はマスタ照合・推定・矛盾の有無から自動算出されます。</div>`;
+}
+function updStore(i,k,v){ if(k==="aliases") S.masters.stores[i].aliases=v.split(/[,、]/).map(s=>s.trim()).filter(Boolean); else S.masters.stores[i].target=+v||0; save(); }
+function updCourse(st,min,v){ if(!S.masters.courses[st]) S.masters.courses[st]={}; if(v==="") delete S.masters.courses[st][min]; else S.masters.courses[st][min]=+v; save(); }
+function updTher(i,k,v){ if(k==="aliases") S.masters.therapists[i].aliases=v.split(/[,、]/).map(s=>s.trim()).filter(Boolean); else S.masters.therapists[i].store=v; save(); }
+function delTher(i){ if(confirm("「"+S.masters.therapists[i].name+"」を削除しますか?")){ S.masters.therapists.splice(i,1); save(); renderMasters(); } }
+function addTher(){
+  const n=$("newTherName").value.trim(); if(!n){ toast("名前を入力してください"); return; }
+  if(S.masters.therapists.some(t=>t.name===n)){ toast("既に登録済みです"); return; }
+  S.masters.therapists.push({name:n, aliases:$("newTherAlias").value.split(/[,、]/).map(s=>s.trim()).filter(Boolean), store:$("newTherStore").value});
+  $("newTherName").value=""; $("newTherAlias").value="";
+  save(); renderMasters(); toast("追加しました");
+}
+
+/* ================= ナビ・初期化 ================= */
+document.querySelectorAll("#nav button").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("#nav button").forEach(x=>x.classList.remove("on"));
+    document.querySelectorAll("section.tab").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    $("tab-"+b.dataset.t).classList.add("on");
+    if(b.dataset.t==="queue") renderQueue();
+    if(b.dataset.t==="db") renderDb();
+    if(b.dataset.t==="dash") renderDash();
+    if(b.dataset.t==="ai") renderReports();
+    if(b.dataset.t==="master") renderMasters();
+  };
+});
+$("modalBg").onclick=e=>{ if(e.target.id==="modalBg") closeModal(); };
+function initAll(){
+  $("recvDate").value=todayStr();
+  $("manualForm").innerHTML=manualFormHtml();
+  $("xlStore").innerHTML='<option value="">店舗列が無い場合の既定店舗...</option>'+S.masters.stores.map(s=>'<option>'+esc(s.name)+'</option>').join("");
+  renderQueue(); refreshFilterOptions(); updateBadges();
+}
+initAll();
+</script>
+</body>
+</html>

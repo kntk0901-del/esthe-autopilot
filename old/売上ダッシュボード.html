@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>売上ダッシュボード</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f1320;--card:#1a2030;--line:#2a3245;--tx:#e8ecf4;--sub:#8a94ab;--ac:#4f8cff;--gd:#f5c34d;--gn:#3ecf8e;--rd:#ff6b6b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:1100px;margin:0 auto}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:var(--sub);font-size:12px;margin-bottom:16px}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:40px 20px;text-align:center;color:var(--sub);cursor:pointer;transition:.2s}
+#drop.over{border-color:var(--ac);color:var(--ac);background:#16203a}
+#dash{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card .l{font-size:11px;color:var(--sub)}
+.card .v{font-size:22px;font-weight:700;margin-top:4px}
+.card .d{font-size:11px;color:var(--sub);margin-top:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.panel h2{font-size:14px;margin-bottom:12px;color:var(--tx)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.chartbox{position:relative;height:260px}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:none;color:var(--sub);cursor:pointer;font-size:13px}
+.tab.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.podium{display:flex;gap:10px;justify-content:center;align-items:flex-end;margin:10px 0 18px}
+.pd{text-align:center;flex:1;max-width:140px}
+.pd .bar{border-radius:8px 8px 0 0;display:flex;flex-direction:column;justify-content:flex-end;padding:8px 4px}
+.pd.p1 .bar{height:110px;background:linear-gradient(180deg,#f5c34d,#b8860b)}
+.pd.p2 .bar{height:85px;background:linear-gradient(180deg,#c0c8d8,#7a8499)}
+.pd.p3 .bar{height:65px;background:linear-gradient(180deg,#d99a6c,#8c5a30)}
+.pd .nm{font-weight:700;font-size:14px;margin-top:6px}
+.pd .amt{font-size:12px;color:var(--sub)}
+.pd .medal{font-size:22px}
+details{margin-top:8px}
+summary{cursor:pointer;color:var(--sub);font-size:13px;padding:6px 0}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line)}
+th{color:var(--sub);font-weight:400;font-size:11px}
+td:first-child,th:first-child{text-align:left}
+.bar-bg{background:var(--line);border-radius:6px;height:10px;overflow:hidden;margin-top:6px}
+.bar-fg{height:100%;border-radius:6px;background:var(--ac)}
+.note{font-size:11px;color:var(--sub);margin-top:10px;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>売上ダッシュボード</h1>
+<div class="sub">月度売上表 (.xlsx) を下にドラッグ&ドロップ、またはクリックして選択。データはこの端末内でのみ処理されます。</div>
+<div id="drop">ここに売上表ファイルをドロップ<br><span style="font-size:11px">(例: メンズエステ【2月度売上表】.xlsx)</span></div>
+<input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
+
+<div id="dash">
+  <div class="cards" id="cards"></div>
+  <div class="panel"><h2>日次売上推移 (店舗別)</h2><div class="chartbox" style="height:300px"><canvas id="cDaily"></canvas></div></div>
+  <div class="grid2">
+    <div class="panel"><h2>曜日別 平均売上</h2><div class="chartbox"><canvas id="cDow"></canvas></div></div>
+    <div class="panel"><h2>店舗別 予算進捗</h2><div id="budget"></div></div>
+  </div>
+  <div class="panel">
+    <h2>セラピストランキング</h2>
+    <div class="tabs" id="storeTabs"></div>
+    <div class="podium" id="podium"></div>
+    <details><summary>全ランキングを表示 (管理者向け)</summary><div id="rankTable"></div></details>
+    <div class="note">※ 表彰はTOP3のみの公開を推奨。全ランキングの全体共有は下位メンバーの離職リスクがあるため管理者間に留めてください。<br>※ 出勤数はシフト表の記載に基づく参考値です。</div>
+  </div>
+</div>
+
+<script>
+// ===== パーサー =====
+function num(v){var n=typeof v==='number'?v:parseFloat(v);return isFinite(n)?n:0}
+function cnt(v){var n=num(v);return(n>=0&&n<=30)?n:0}
+function isDate(v){return v instanceof Date&&!isNaN(v)}
+function parseWorkbook(wb){
+  var stores=[],lastStore=null;
+  wb.SheetNames.forEach(function(sn){
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
+    if(/売上/.test(sn)&&!/^G/.test(sn)){
+      var m=sn.match(/【(.+?)】/);
+      var store={name:m?m[1]:sn,days:[],therapists:{}};
+      rows.forEach(function(r){
+        if(!r)return;
+        var v=r.slice();
+        if(v.length>1&&isDate(v[1]))v=v.slice(1);
+        if(!isDate(v[0]))return;
+        store.days.push({date:v[0],dow:v[0].getDay(),sales:num(v[2]),profit:num(v[4]),budget:num(v[6]),nw:cnt(v[11]),rep:cnt(v[12]),shimei:cnt(v[13])});
+      });
+      if(store.days.length){stores.push(store);lastStore=store}
+    }else if(/^シフト/.test(sn)&&lastStore){parseShift(rows,lastStore)}
+  });
+  return stores;
+}
+function parseShift(rows,store){
+  var salesCols=[];
+  for(var i=0;i<Math.min(rows.length,5);i++){
+    var f=[];(rows[i]||[]).forEach(function(c,j){if(c==='売上')f.push(j)});
+    if(f.length){salesCols=f;break}
+  }
+  if(!salesCols.length)return;
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i]||[];
+    salesCols.forEach(function(sc){
+      var name=r[sc-1];
+      if(typeof name!=='string')return;
+      name=name.trim();
+      if(!name||name.indexOf('新規')>=0||name==='名前')return;
+      var t=store.therapists[name]||(store.therapists[name]={sales:0,shifts:0,hon:0,shimei:0,nw:0});
+      t.shifts+=1;t.sales+=num(r[sc]);
+      var nx=rows[i+1]||[];
+      if(typeof nx[sc-1]==='string'&&nx[sc-1].indexOf('新規')>=0){
+        var n=cnt(nx[sc]),rep=cnt(nx[sc+1]),s=cnt(nx[sc+2]);
+        t.nw+=n;t.hon+=n+rep+s;t.shimei+=s;
+      }
+    });
+  }
+}
+// ===== UI =====
+var COLORS=['#4f8cff','#3ecf8e','#f5c34d','#ff6b6b','#b07cff'];
+var DOW=['日','月','火','水','木','金','土'];
+var charts=[],stores=[];
+function yen(n){return n.toLocaleString('ja-JP')}
+function el(id){return document.getElementById(id)}
+
+var drop=el('drop'),fi=el('file');
+drop.onclick=function(){fi.click()};
+drop.ondragover=function(e){e.preventDefault();drop.classList.add('over')};
+drop.ondragleave=function(){drop.classList.remove('over')};
+drop.ondrop=function(e){e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
+fi.onchange=function(){if(fi.files[0])load(fi.files[0])};
+
+function load(file){
+  var rd=new FileReader();
+  rd.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      stores=parseWorkbook(wb);
+      if(!stores.length){alert('売上シート (シート名に「売上」を含む) が見つかりませんでした');return}
+      render();
+    }catch(err){alert('読み込みエラー: '+err.message)}
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+function render(){
+  el('dash').style.display='block';
+  drop.style.display='none';
+  charts.forEach(function(c){c.destroy()});charts=[];
+  var act=stores.map(function(s){return s.days.filter(function(d){return d.sales>0})});
+  var tot=0,prof=0,nw=0,hon=0,shimei=0,bud=0,days=0;
+  stores.forEach(function(s,i){
+    s.days.forEach(function(d){tot+=d.sales;prof+=d.profit;nw+=d.nw;hon+=d.nw+d.rep+d.shimei;shimei+=d.shimei;bud+=d.budget});
+    days=Math.max(days,act[i].length);
+  });
+  var cards=[
+    ['売上合計',yen(tot)+'円','全店 / 営業'+days+'日'],
+    ['粗利合計',yen(prof)+'円','粗利率 '+(tot?Math.round(prof/tot*100):0)+'%'],
+    ['総本数',yen(hon)+'本','平均単価 '+(hon?yen(Math.round(tot/hon)):0)+'円'],
+    ['新規',nw+'人','新規率 '+(hon?Math.round(nw/hon*100):0)+'%'],
+    ['指名',shimei+'本','指名率 '+(hon?Math.round(shimei/hon*100):0)+'%'],
+    ['予算進捗',(bud?Math.round(tot/bud*100):0)+'%','予算 '+yen(bud)+'円']
+  ];
+  el('cards').innerHTML=cards.map(function(c){return '<div class="card"><div class="l">'+c[0]+'</div><div class="v">'+c[1]+'</div><div class="d">'+c[2]+'</div></div>'}).join('');
+
+  // 日次推移
+  var labels=stores[0].days.map(function(d){return (d.date.getMonth()+1)+'/'+d.date.getDate()});
+  charts.push(new Chart(el('cDaily'),{type:'bar',
+    data:{labels:labels,datasets:stores.map(function(s,i){return{label:s.name,data:s.days.map(function(d){return d.sales}),backgroundColor:COLORS[i],stack:'a'}})},
+    options:opt(true)}));
+
+  // 曜日別
+  var dowAvg=stores.map(function(s,i){
+    return [0,1,2,3,4,5,6].map(function(w){
+      var ds=act[i].filter(function(d){return d.dow===w});
+      return ds.length?Math.round(ds.reduce(function(a,d){return a+d.sales},0)/ds.length):0;
+    });
+  });
+  charts.push(new Chart(el('cDow'),{type:'bar',
+    data:{labels:DOW,datasets:stores.map(function(s,i){return{label:s.name,data:dowAvg[i],backgroundColor:COLORS[i]}})},
+    options:opt(false)}));
+
+  // 予算進捗
+  el('budget').innerHTML=stores.map(function(s,i){
+    var t=s.days.reduce(function(a,d){return a+d.sales},0),b=s.days.reduce(function(a,d){return a+d.budget},0);
+    var p=b?Math.min(Math.round(t/b*100),100):0;
+    return '<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>'+s.name+'</span><span>'+yen(t)+' / '+yen(b)+'円 ('+(b?Math.round(t/b*100):0)+'%)</span></div><div class="bar-bg"><div class="bar-fg" style="width:'+p+'%;background:'+COLORS[i]+'"></div></div></div>';
+  }).join('');
+
+  // ランキングタブ
+  el('storeTabs').innerHTML=stores.map(function(s,i){return '<button class="tab'+(i===0?' on':'')+'" onclick="showRank('+i+',this)">'+s.name+'</button>'}).join('');
+  showRank(0,null);
+}
+function opt(stacked){
+  return {responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#8a94ab',boxWidth:12}}},
+    scales:{x:{stacked:stacked,ticks:{color:'#8a94ab',maxRotation:0,autoSkip:true},grid:{color:'#2a3245'}},
+            y:{stacked:stacked,ticks:{color:'#8a94ab',callback:function(v){return (v/10000)+'万'}},grid:{color:'#2a3245'}}}};
+}
+function showRank(i,btn){
+  if(btn){document.querySelectorAll('#storeTabs .tab').forEach(function(b){b.classList.remove('on')});btn.classList.add('on')}
+  var s=stores[i];
+  var rank=Object.keys(s.therapists).map(function(k){var t=s.therapists[k];t.name=k;return t})
+    .filter(function(t){return t.sales>0}).sort(function(a,b){return b.sales-a.sales});
+  var top3=rank.slice(0,3),order=[1,0,2],cls=['p2','p1','p3'],medal=['🥈','🥇','🥉'];
+  el('podium').innerHTML=order.map(function(o,j){
+    var t=top3[o];if(!t)return '';
+    return '<div class="pd '+cls[j]+'"><div class="bar"><div class="medal">'+medal[j]+'</div></div><div class="nm">'+t.name+'</div><div class="amt">'+yen(t.sales)+'円 / '+t.hon+'本</div></div>';
+  }).join('');
+  el('rankTable').innerHTML='<table><tr><th>名前</th><th>売上</th><th>出勤</th><th>本数</th><th>指名</th><th>新規</th><th>売上/出勤</th></tr>'+
+    rank.map(function(t){return '<tr><td>'+t.name+'</td><td>'+yen(t.sales)+'</td><td>'+t.shifts+'</td><td>'+t.hon+'</td><td>'+t.shimei+'</td><td>'+t.nw+'</td><td>'+yen(t.shifts?Math.round(t.sales/t.shifts):0)+'</td></tr>'}).join('')+'</table>';
+}
+</script>
+</body>
+</html>

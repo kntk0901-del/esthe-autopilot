@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X投稿一括生成ツール</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0f1320;--card:#1a2030;--line:#2a3245;--tx:#e8ecf4;--sub:#8a94ab;--ac:#4f8cff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:var(--bg);color:var(--tx);padding:16px;max-width:900px;margin:0 auto}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:var(--sub);font-size:12px;margin-bottom:16px;line-height:1.6}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--sub);cursor:pointer}
+#drop.over{border-color:var(--ac);color:var(--ac)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:14px 0}
+.panel h2{font-size:14px;margin-bottom:10px}
+label{font-size:12px;color:var(--sub);display:block;margin:10px 0 4px}
+input[type=text],input[type=time],select{width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:#101627;color:var(--tx);font-size:13px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.row{grid-template-columns:1fr}}
+button{padding:10px 18px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:14px;cursor:pointer;margin-top:12px}
+button.ghost{background:none;border:1px solid var(--line);color:var(--sub);padding:5px 12px;font-size:12px;margin:0}
+.post{background:#101627;border:1px solid var(--line);border-radius:8px;padding:12px;margin:8px 0;font-size:13px;white-space:pre-wrap;line-height:1.7}
+.post .meta{display:flex;justify-content:space-between;align-items:center;color:var(--sub);font-size:11px;margin-bottom:6px}
+.warn{font-size:11px;color:#f5c34d;line-height:1.7;margin-top:8px}
+#out{display:none}
+.cnt{color:var(--sub);font-size:12px;margin:8px 0}
+</style>
+</head>
+<body>
+<h1>X投稿一括生成ツール</h1>
+<div class="sub">シフト入りの売上表 (.xlsx) を読み込むと、店舗×日別の「出勤情報」「夜の空き枠案内」投稿文を月分まとめて生成します。生成後はCSVをダウンロードしてSocialDog等の予約投稿ツールに取り込んでください。データはこの端末内でのみ処理されます。</div>
+<div id="drop">ここに売上表 (シフト入り) をドロップ / クリックで選択</div>
+<input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
+
+<div class="panel" id="conf" style="display:none">
+  <h2>設定</h2>
+  <div class="row">
+    <div><label>朝の投稿時刻 (出勤情報)</label><input type="time" id="tAM" value="10:00"></div>
+    <div><label>夕方の投稿時刻 (空き枠案内)</label><input type="time" id="tPM" value="17:30"></div>
+  </div>
+  <div id="storeConf"></div>
+  <button onclick="gen()">投稿を生成する</button>
+</div>
+
+<div id="out">
+  <div class="panel">
+    <h2>生成結果</h2>
+    <div class="cnt" id="cnt"></div>
+    <button onclick="dlCSV()">CSVダウンロード (予約投稿ツール取込用)</button>
+    <div class="warn">運用上の注意:<br>・X APIによる完全自動投稿はAPI有料化とスパム判定 (シャドウバン) のリスクがあるため、予約投稿ツール経由を推奨します。<br>・同一文面の繰り返しはスパム判定されやすいため、本ツールは文面を日替わりでローテーションしています。<br>・効能をうたう表現 (「治る」「改善する」等) は景表法・あはき法に抵触し得るため生成文に含めていません。追記時もご注意ください。</div>
+    <div id="posts"></div>
+  </div>
+</div>
+
+<script>
+function isDate(v){return v instanceof Date&&!isNaN(v)}
+var schedule={},year=2026,month=2,storeNames=[];
+
+document.getElementById('drop').onclick=function(){document.getElementById('file').click()};
+var drop=document.getElementById('drop');
+drop.ondragover=function(e){e.preventDefault();drop.classList.add('over')};
+drop.ondragleave=function(){drop.classList.remove('over')};
+drop.ondrop=function(e){e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
+document.getElementById('file').onchange=function(e){if(e.target.files[0])load(e.target.files[0])};
+
+function load(file){
+  var rd=new FileReader();
+  rd.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      parse(wb);
+      if(!storeNames.length){alert('シフトシートが見つかりませんでした');return}
+      buildConf();
+    }catch(err){alert('読み込みエラー: '+err.message)}
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+function parse(wb){
+  schedule={};storeNames=[];
+  var lastStore=null;
+  wb.SheetNames.forEach(function(sn){
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
+    if(/売上/.test(sn)&&!/^G/.test(sn)){
+      var m=sn.match(/【(.+?)】/);
+      lastStore=m?m[1]:sn;
+      rows.forEach(function(r){
+        if(!r)return;var v=r.slice();
+        if(v.length>1&&isDate(v[1]))v=v.slice(1);
+        if(isDate(v[0])){year=v[0].getFullYear();month=v[0].getMonth()+1}
+      });
+    }else if(/^シフト/.test(sn)&&lastStore){
+      var nameCols=[];
+      for(var i=0;i<Math.min(rows.length,5);i++){
+        var f=[];(rows[i]||[]).forEach(function(c,j){if(c==='売上')f.push(j-1)});
+        if(f.length){nameCols=f;break}
+      }
+      if(!nameCols.length)return;
+      if(storeNames.indexOf(lastStore)<0){storeNames.push(lastStore);schedule[lastStore]={}}
+      var day=0;
+      rows.forEach(function(r){
+        if(!r)return;
+        if(typeof r[0]==='number'&&r[0]>=1&&r[0]<=31)day=r[0];
+        if(!day)return;
+        nameCols.forEach(function(nc){
+          var nm=r[nc];
+          if(typeof nm!=='string')return;
+          nm=nm.trim();
+          if(!nm||nm.indexOf('新規')>=0||nm==='名前')return;
+          var d=schedule[lastStore][day]||(schedule[lastStore][day]=[]);
+          if(d.indexOf(nm)<0)d.push(nm);
+        });
+      });
+    }
+  });
+}
+
+function buildConf(){
+  document.getElementById('conf').style.display='block';
+  document.getElementById('storeConf').innerHTML=storeNames.map(function(s,i){
+    return '<div class="row"><div><label>'+s+': 店名表記</label><input type="text" id="nm'+i+'" value="'+s+'店"></div>'+
+    '<div><label>'+s+': 予約導線 (電話/URL/DM)</label><input type="text" id="bk'+i+'" value="ご予約はプロフィールのリンクまたはDMから"></div></div>'+
+    '<div><label>'+s+': ハッシュタグ</label><input type="text" id="hs'+i+'" value="#メンズエステ #'+s+'"></div>';
+  }).join('');
+}
+
+// 文面テンプレート (日替わりローテーション)
+var AM=[
+  '【本日の出勤情報】\n{store}\n\n{names}\n\n本日も心を込めて施術いたします。\n{book}\n{tags}',
+  '{store} 本日の出勤セラピスト\n\n{names}\n\n空き枠はお早めにどうぞ。\n{book}\n{tags}',
+  'おはようございます。{store}です。\n\n本日の出勤は\n{names}\n\nお仕事の合間のリフレッシュにぜひ。\n{book}\n{tags}',
+  '【出勤情報】{store}\n\n{names}\n\n日頃の疲れ、オールハンドの施術でほぐしませんか。\n{book}\n{tags}',
+  '{store}、本日も営業しております。\n\n出勤セラピスト:\n{names}\n\n{book}\n{tags}'
+];
+var PM=[
+  '【本日の空き状況】\n{store}\n\nこのあとのお時間、まだご案内可能です。\nお仕事帰りの癒しにいかがですか。\n{book}\n{tags}',
+  '{store}です。\n\n本日夜のご予約、若干の空きがございます。\n一日の疲れをリセットしてお帰りください。\n{book}\n{tags}',
+  'こんばんは、{store}です。\n\n当日予約も大歓迎。\nこのあとの空き枠はDMにてご確認ください。\n{book}\n{tags}',
+  '【当日予約OK】{store}\n\n本日はまだご案内できる枠がございます。\n思い立ったときが癒しどきです。\n{book}\n{tags}',
+  '{store}、本日も深夜まで営業中。\n\nお仕事おつかれさまです。\n帰り道の途中に、極上のリラックスタイムを。\n{book}\n{tags}'
+];
+var posts=[];
+function gen(){
+  posts=[];
+  var tAM=document.getElementById('tAM').value,tPM=document.getElementById('tPM').value;
+  storeNames.forEach(function(s,i){
+    var disp=document.getElementById('nm'+i).value;
+    var book=document.getElementById('bk'+i).value;
+    var tags=document.getElementById('hs'+i).value;
+    Object.keys(schedule[s]).map(Number).sort(function(a,b){return a-b}).forEach(function(day){
+      var names=schedule[s][day];
+      if(!names.length)return;
+      var dt=year+'/'+String(month).padStart(2,'0')+'/'+String(day).padStart(2,'0');
+      var nList=names.map(function(n){return '・'+n}).join('\n');
+      var am=AM[day%AM.length].replace('{store}',disp).replace('{names}',nList).replace('{book}',book).replace('{tags}',tags);
+      var pm=PM[day%PM.length].replace(/\{store\}/g,disp).replace('{book}',book).replace('{tags}',tags);
+      posts.push({dt:dt+' '+tAM,text:am,store:disp});
+      posts.push({dt:dt+' '+tPM,text:pm,store:disp});
+    });
+  });
+  posts.sort(function(a,b){return a.dt<b.dt?-1:1});
+  document.getElementById('out').style.display='block';
+  document.getElementById('cnt').textContent='生成: '+posts.length+'件 ('+storeNames.length+'店舗)';
+  document.getElementById('posts').innerHTML=posts.map(function(p,i){
+    return '<div class="post"><div class="meta"><span>'+p.dt+' / '+p.store+'</span><button class="ghost" onclick="cp('+i+',this)">コピー</button></div>'+esc(p.text)+'</div>';
+  }).join('');
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}
+function cp(i,btn){navigator.clipboard.writeText(posts[i].text).then(function(){btn.textContent='済';setTimeout(function(){btn.textContent='コピー'},1200)})}
+function dlCSV(){
+  var rows=posts.map(function(p){return '"'+p.text.replace(/"/g,'""')+'","'+p.dt+'"'});
+  var csv='﻿'+rows.join('\r\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='X予約投稿_'+year+'年'+month+'月.csv';
+  a.click();
+}
+</script>
+</body>
+</html>

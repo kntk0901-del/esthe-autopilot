@@ -1,0 +1,58 @@
+"use client";
+
+import { createBrowserClient } from "@supabase/ssr";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { LoaderCircle, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+export function LoginForm() {
+  const router = useRouter();
+  const [email, setEmail] = useState("admin@example.com");
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState("");
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setPending(true);
+    setMessage("");
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) {
+      router.push("/dashboard");
+      return;
+    }
+    const supabase = createBrowserClient(url, key);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+    });
+    setPending(false);
+    setMessage(error ? error.message : "ログインリンクを送信しました");
+  }
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <label className="block text-sm font-semibold">
+        管理者メール
+        <span className="relative mt-2 block">
+          <Mail className="absolute left-3 top-3 h-4 w-4 text-[#858b86]" />
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="h-10 w-full rounded-lg border bg-white pl-10 pr-3 font-normal"
+            required
+          />
+        </span>
+      </label>
+      <Button className="w-full" disabled={pending}>
+        {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+        メールでログイン
+      </Button>
+      {message ? (
+        <p className="rounded-lg border bg-[#f6f3ed] p-3 text-xs text-[#626862]">
+          {message}
+        </p>
+      ) : null}
+    </form>
+  );
+}
