@@ -1,5 +1,6 @@
 import { CheckCircle2, CircleDashed, Database, KeyRound, Radio, Sparkles } from "lucide-react";
 import { StoreSettingsForm } from "@/components/settings/store-settings-form";
+import { StoreXCredentialsForm } from "@/components/settings/store-x-credentials-form";
 import { SystemSettingsForm } from "@/components/settings/system-settings-form";
 import { IntegrationSecretsForm } from "@/components/settings/integration-secrets-form";
 import { Badge } from "@/components/ui/badge";
@@ -180,6 +181,43 @@ export default async function SettingsPage() {
           <IntegrationSecretsForm initialStatus={secretStatus} />
         </CardContent>
       </Card>
+      <section className="mt-6">
+        <div className="mb-3">
+          <h2 className="font-serif text-xl font-semibold">
+            店舗別X投稿アカウント
+          </h2>
+          <p className="mt-1 text-xs text-[#777d78]">
+            店舗ごとに別のXアカウントへ投稿する場合に設定します。未入力の店舗は上の「外部API資格情報」の共通キーを使用します。
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {data.stores.map((store) => (
+            <Card key={store.id}>
+              <CardHeader>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d9654f]">
+                    {store.code}
+                  </p>
+                  <h3 className="mt-1 font-serif text-lg font-semibold">
+                    {store.display_name}
+                  </h3>
+                  {store.x_account_name ? (
+                    <p className="mt-1 text-xs text-[#777d78]">
+                      @{store.x_account_name}
+                    </p>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <StoreXCredentialsForm
+                  storeCode={store.code}
+                  storeName={store.display_name}
+                />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
       <section className="mt-6">
         <div className="mb-3">
           <h2 className="font-serif text-xl font-semibold">店舗設定</h2>

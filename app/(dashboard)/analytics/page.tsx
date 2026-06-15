@@ -1,3 +1,4 @@
+import { MonthSelector } from "@/components/analytics/month-selector";
 import { VariantChart } from "@/components/analytics/variant-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,11 +10,30 @@ import { getAppData } from "@/lib/db/repository";
 import { getJstMonthString } from "@/lib/dates/jst";
 import { formatCurrency, percentage } from "@/lib/utils";
 
-export default async function AnalyticsPage() {
+// 対象月の初日・末日 (JST) を返す。末日は月ごとに正しく算出する (旧来の -31 固定を廃止)。
+function monthRange(month: string): { from: string; to: string } {
+  const [year, m] = month.split("-").map(Number);
+  const lastDay = new Date(year, m, 0).getDate();
+  return {
+    from: `${month}-01`,
+    to: `${month}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const data = await getAppData();
-  const month = getJstMonthString();
-  const stores = calculateStoreMetrics(data, `${month}-01`, `${month}-31`);
-  const therapists = calculateTherapistMetrics(data)
+  const currentMonth = getJstMonthString();
+  const requested = (await searchParams).month;
+  const month = /^\d{4}-\d{2}$/.test(requested ?? "")
+    ? (requested as string)
+    : currentMonth;
+  const { from, to } = monthRange(month);
+  const stores = calculateStoreMetrics(data, from, to);
+  const therapists = calculateTherapistMetrics(data, from, to)
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 8);
   const variants = calculateVariantMetrics(data);
@@ -24,6 +44,15 @@ export default async function AnalyticsPage() {
         title="売上・投稿分析"
         description="既定のPoC評価は運用実現性です。売上差はランダムホールドアウト実施時のみ表示します。"
       />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#777d78]">
+            対象月
+          </p>
+          <p className="mt-1 font-serif text-lg font-semibold tabular">{month}</p>
+        </div>
+        <MonthSelector month={month} currentMonth={currentMonth} />
+      </div>
       <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader>
