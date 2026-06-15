@@ -8,13 +8,14 @@ import type {
 
 const scraperDefaults: Record<StoreCode, StoreScraperConfig> = {
   kamata: {
-    dateTabSelector: "[id^='tlsp-']",
+    // ザ・リッツ蒲田は大井町と同一のスケジュールテーマ(tl-schedule-card)を使用。
+    dateTabSelector: ".tl-tabs__panel",
     dateIdPattern: "tlsp-YYYY-MM-DD",
     cardSelector: ".tl-schedule-card",
-    nameSelector: ".therapist-name",
-    timeSelector: ".schedule-time",
+    nameSelector: ".tl-schedule-card__name",
+    timeSelector: ".tl-schedule-card__time",
     imageSelector: "img",
-    profileLinkSelector: "a",
+    profileLinkSelector: ".tl-schedule-card__name a",
     fallbackActiveTabSelector: ".is-active",
     timezone: "Asia/Tokyo",
   },

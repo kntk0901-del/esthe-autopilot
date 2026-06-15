@@ -7,7 +7,7 @@ insert into stores (
   'kamata', '蒲田', 'ザ・リッツ蒲田',
   'https://the-ritz-kamata.com/schedule/', 'https://example.com/kamata/reserve',
   '@ritz_kamata_demo', 2600000, 2, true, false,
-  '{"dateTabSelector":"[id^=''tlsp-'']","dateIdPattern":"tlsp-YYYY-MM-DD","cardSelector":".tl-schedule-card","nameSelector":".therapist-name","timeSelector":".schedule-time","imageSelector":"img","profileLinkSelector":"a","fallbackActiveTabSelector":".is-active","timezone":"Asia/Tokyo"}',
+  '{"dateTabSelector":".tl-tabs__panel","dateIdPattern":"tlsp-YYYY-MM-DD","cardSelector":".tl-schedule-card","nameSelector":".tl-schedule-card__name","timeSelector":".tl-schedule-card__time","imageSelector":"img","profileLinkSelector":".tl-schedule-card__name a","fallbackActiveTabSelector":".is-active","timezone":"Asia/Tokyo"}',
   '{"postTime":"10:00","includeUrlRate":0.5,"maxTherapists":4,"approvalRequired":false,"hashtags":["蒲田","メンズエステ"],"imageAllowedDomains":["the-ritz-kamata.com"]}'
 ),
 (
