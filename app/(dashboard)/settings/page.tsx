@@ -8,12 +8,15 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { getEnv } from "@/lib/config/env";
 import { getAppData } from "@/lib/db/repository";
-import { getSecretStatus } from "@/lib/settings/secrets";
+import { getSecretStatus, getStoreScopedXStatus } from "@/lib/settings/secrets";
 
 export default async function SettingsPage() {
   const data = await getAppData();
   const env = getEnv();
   const secretStatus = await getSecretStatus();
+  const storeXStatus = await getStoreScopedXStatus(
+    data.stores.map((store) => store.code),
+  );
   const services = [
     {
       name: "Supabase",
@@ -54,11 +57,25 @@ export default async function SettingsPage() {
       detail: data.systemSettings.xMockMode ? "Mock posting" : "Official API mode",
     },
   ];
+  // 本番稼働までの導入手順。上から順に設定していくと実運用に到達できる。
   const readiness = [
     {
       label: "永続DB・ログイン",
       ready: env.DATA_MODE === "supabase",
       detail: "Supabaseモード",
+      hint: "Supabaseの接続情報を環境変数に設定し、DATA_MODEをsupabaseにします。",
+    },
+    {
+      label: "秘密情報暗号化",
+      ready: Boolean(env.SETTINGS_ENCRYPTION_KEY),
+      detail: "SETTINGS_ENCRYPTION_KEY",
+      hint: "資格情報を暗号化保存するための鍵(SETTINGS_ENCRYPTION_KEY)を設定します。",
+    },
+    {
+      label: "排他制御",
+      ready: secretStatus.upstashRedisUrl && secretStatus.upstashRedisToken,
+      detail: "Upstash Redis",
+      hint: "下の「外部API資格情報」にUpstash RedisのURLとTokenを入力します(重複投稿を防止)。",
     },
     {
       label: "実X投稿",
@@ -69,11 +86,15 @@ export default async function SettingsPage() {
         secretStatus.xAccessToken &&
         secretStatus.xAccessTokenSecret,
       detail: "XモックOFF + 4資格情報",
+      hint: "X APIの4資格情報を入力し、「分析・投稿ガード」でXモックをOFFにします。",
     },
     {
-      label: "排他制御",
-      ready: secretStatus.upstashRedisUrl && secretStatus.upstashRedisToken,
-      detail: "Upstash Redis",
+      label: "店舗設定",
+      ready: data.stores
+        .filter((store) => store.enabled && store.auto_scrape_enabled)
+        .every((store) => Boolean(store.schedule_url)),
+      detail: "自動取得対象のURL",
+      hint: "下の「店舗設定」で、自動取得する店舗のスケジュールURLを登録します。",
     },
     {
       label: "自動実行",
@@ -88,20 +109,11 @@ export default async function SettingsPage() {
         data.systemSettings.schedulerMode === "qstash"
           ? "QStash店舗別時刻"
           : "Vercel 09:00 JST",
-    },
-    {
-      label: "店舗設定",
-      ready: data.stores
-        .filter((store) => store.enabled && store.auto_scrape_enabled)
-        .every((store) => Boolean(store.schedule_url)),
-      detail: "自動取得対象のURL",
-    },
-    {
-      label: "秘密情報暗号化",
-      ready: Boolean(env.SETTINGS_ENCRYPTION_KEY),
-      detail: "SETTINGS_ENCRYPTION_KEY",
+      hint: "日次実行の方式を選びます。Vercel CronはCRON_SECRET、QStashは3つの鍵が必要です。",
     },
   ];
+  const readyCount = readiness.filter((item) => item.ready).length;
+  const nextStep = readiness.find((item) => !item.ready);
   return (
     <>
       <PageHeader
@@ -137,22 +149,65 @@ export default async function SettingsPage() {
       <Card className="mt-6">
         <CardHeader>
           <div>
-            <h2 className="font-serif text-lg font-semibold">本番稼働チェック</h2>
+            <h2 className="font-serif text-lg font-semibold">
+              本番稼働までの手順
+            </h2>
             <p className="mt-1 text-xs text-[#777d78]">
-              すべて「準備完了」になるまで実アカウントの自動投稿はONにしないでください。
+              上から順に設定すると実運用に到達できます。すべて完了するまで実アカウントの自動投稿はONにしないでください。
             </p>
           </div>
+          <Badge tone={readyCount === readiness.length ? "success" : "warning"}>
+            {readyCount}/{readiness.length} 完了
+          </Badge>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-          {readiness.map((item) => (
-            <div key={item.label} className="rounded-xl border bg-[#faf8f4] p-4">
-              <Badge tone={item.ready ? "success" : "warning"}>
-                {item.ready ? "準備完了" : "要設定"}
-              </Badge>
-              <p className="mt-3 text-sm font-bold">{item.label}</p>
-              <p className="mt-1 text-xs text-[#777d78]">{item.detail}</p>
+        <CardContent className="space-y-3">
+          {nextStep ? (
+            <div className="rounded-xl border border-[#e5c7a0] bg-[#fdf6ec] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b07d2f]">
+                次にやること
+              </p>
+              <p className="mt-1 text-sm font-bold">{nextStep.label}</p>
+              <p className="mt-1 text-xs leading-5 text-[#6e746f]">
+                {nextStep.hint}
+              </p>
             </div>
-          ))}
+          ) : (
+            <div className="rounded-xl border border-[#bfe0d4] bg-[#f0f8f4] p-4 text-sm font-semibold text-[#2f7d6d]">
+              すべての項目が完了しています。実アカウントの自動投稿を開始できます。
+            </div>
+          )}
+          <ol className="space-y-2">
+            {readiness.map((item, index) => (
+              <li
+                key={item.label}
+                className="flex items-start gap-3 rounded-xl border bg-[#faf8f4] p-4"
+              >
+                <span
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                    item.ready
+                      ? "bg-[#2f7d6d] text-white"
+                      : "bg-[#e7e2d8] text-[#8b8276]"
+                  }`}
+                >
+                  {item.ready ? "✓" : index + 1}
+                </span>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-bold">{item.label}</p>
+                    <Badge tone={item.ready ? "success" : "warning"}>
+                      {item.ready ? "準備完了" : "要設定"}
+                    </Badge>
+                    <span className="text-[11px] text-[#9a9389]">
+                      {item.detail}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-[#6e746f]">
+                    {item.hint}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </CardContent>
       </Card>
       <Card className="mt-6">
@@ -207,6 +262,9 @@ export default async function SettingsPage() {
                     </p>
                   ) : null}
                 </div>
+                <Badge tone={storeXStatus[store.code] ? "success" : "neutral"}>
+                  {storeXStatus[store.code] ? "店舗専用キー" : "共通キー使用"}
+                </Badge>
               </CardHeader>
               <CardContent>
                 <StoreXCredentialsForm

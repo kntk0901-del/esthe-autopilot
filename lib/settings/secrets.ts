@@ -144,3 +144,20 @@ export async function getSecretStatus(): Promise<SecretStatus> {
   );
   return Object.fromEntries(pairs) as SecretStatus;
 }
+
+// 店舗ごとに専用のX資格情報(base:storeCode)が設定済みかを返す。
+// すべての項目が揃っている場合のみ「店舗専用キー」とみなし、未設定は共通キーへフォールバックする。
+export async function getStoreScopedXStatus(
+  storeCodes: string[],
+): Promise<Record<string, boolean>> {
+  const bases = [...storeScopedBases];
+  const entries = await Promise.all(
+    storeCodes.map(async (code) => {
+      const flags = await Promise.all(
+        bases.map(async (base) => Boolean(await getSecretValue(`${base}:${code}`))),
+      );
+      return [code, flags.every(Boolean)] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
+}

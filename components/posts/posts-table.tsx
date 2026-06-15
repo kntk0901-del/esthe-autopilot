@@ -25,6 +25,7 @@ export function PostsTable({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [store, setStore] = useState("all");
+  const [month, setMonth] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   async function handleDelete(id: string) {
     if (!window.confirm("この投稿を削除しますか?(取り消せません)")) return;
@@ -47,12 +48,13 @@ export function PostsTable({
         return (
           (status === "all" || post.status === status) &&
           (store === "all" || post.store_id === store) &&
+          (!month || post.post_date.startsWith(month)) &&
           (!query ||
             post.text_content.toLowerCase().includes(query.toLowerCase()) ||
             storeName.includes(query))
         );
       }),
-    [posts, query, status, store, stores],
+    [posts, query, status, store, month, stores],
   );
   return (
     <div>
@@ -89,6 +91,22 @@ export function PostsTable({
           <option value="failed">失敗</option>
           <option value="cancelled">取消</option>
         </select>
+        <input
+          type="month"
+          value={month}
+          onChange={(event) => setMonth(event.target.value)}
+          className="h-9 rounded-lg border bg-white px-3 text-sm"
+          aria-label="対象月で絞り込み"
+        />
+        {month ? (
+          <button
+            type="button"
+            onClick={() => setMonth("")}
+            className="h-9 rounded-lg border bg-white px-3 text-xs font-semibold text-[#b64f3b]"
+          >
+            月解除
+          </button>
+        ) : null}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] text-left text-sm">

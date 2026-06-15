@@ -6,40 +6,31 @@ import type {
   SystemSettings,
 } from "@/lib/types";
 
-const scraperDefaults: Record<StoreCode, StoreScraperConfig> = {
-  kamata: {
-    // ザ・リッツ蒲田は大井町と同一のスケジュールテーマ(tl-schedule-card)を使用。
-    dateTabSelector: ".tl-tabs__panel",
-    dateIdPattern: "tlsp-YYYY-MM-DD",
-    cardSelector: ".tl-schedule-card",
-    nameSelector: ".tl-schedule-card__name",
-    timeSelector: ".tl-schedule-card__time",
-    imageSelector: "img",
-    profileLinkSelector: ".tl-schedule-card__name a",
-    fallbackActiveTabSelector: ".is-active",
-    timezone: "Asia/Tokyo",
-  },
-  oimachi: {
-    dateTabSelector: ".tl-tabs__panel",
-    dateIdPattern: "tlsp-YYYY-MM-DD",
-    cardSelector: ".tl-schedule-card",
-    nameSelector: ".tl-schedule-card__name",
-    timeSelector: ".tl-schedule-card__time",
-    imageSelector: "img",
-    profileLinkSelector: ".tl-schedule-card__name a",
-    fallbackActiveTabSelector: ".is-active",
-    timezone: "Asia/Tokyo",
-  },
+// 未知の店舗コードでも動作させるための汎用スクレイパ既定。
+// 多くの店舗が利用する tl-schedule-card テーマを基準にする。
+// 個別の差異は店舗設定画面(scraper_config)で上書きできる。
+const genericScraperDefault: StoreScraperConfig = {
+  dateTabSelector: ".tl-tabs__panel",
+  dateIdPattern: "tlsp-YYYY-MM-DD",
+  cardSelector: ".tl-schedule-card",
+  nameSelector: ".tl-schedule-card__name",
+  timeSelector: ".tl-schedule-card__time",
+  imageSelector: "img",
+  profileLinkSelector: ".tl-schedule-card__name a",
+  fallbackActiveTabSelector: ".is-active",
+  timezone: "Asia/Tokyo",
+};
+
+// 既知店舗の上書き(汎用既定から差分のみ)。新店舗はここに追記しなくても汎用既定で動く。
+const scraperOverrides: Record<string, Partial<StoreScraperConfig>> = {
+  // ザ・リッツ蒲田・スパラウンジ大井町は汎用既定(tl-schedule-card)のまま。
+  kamata: {},
+  oimachi: {},
   sugamo: {
     dateTabSelector: "[id^='tlsp-']",
-    dateIdPattern: "tlsp-YYYY-MM-DD",
-    cardSelector: ".tl-schedule-card",
     nameSelector: ".therapist-name",
     timeSelector: ".schedule-time",
-    imageSelector: "img",
     profileLinkSelector: "a",
-    fallbackActiveTabSelector: ".is-active",
-    timezone: "Asia/Tokyo",
   },
 };
 
@@ -84,7 +75,11 @@ export function normalizeScraperConfig(
   code: StoreCode,
   config: Partial<StoreScraperConfig> | null | undefined,
 ): StoreScraperConfig {
-  return { ...scraperDefaults[code], ...config };
+  return {
+    ...genericScraperDefault,
+    ...(scraperOverrides[code] ?? {}),
+    ...config,
+  };
 }
 
 export function normalizePostingConfig(

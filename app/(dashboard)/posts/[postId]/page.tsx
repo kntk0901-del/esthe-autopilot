@@ -78,6 +78,9 @@ export default async function PostDetailPage({
               postId={post.id}
               initialText={post.text_content}
               disabled={post.status === "posted"}
+              accountName={store?.x_account_name}
+              displayName={store?.display_name}
+              imageUrls={post.image_urls}
             />
             {post.last_error_message ? (
               <div className="mt-5 rounded-xl border border-[#e7b6ae] bg-[#fff0ed] p-4">

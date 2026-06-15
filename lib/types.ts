@@ -1,4 +1,7 @@
-export type StoreCode = "kamata" | "oimachi" | "sugamo";
+// 店舗コードは店舗マスタ(DB/seed)で定義する文字列。型でリテラルを固定しないことで、
+// 4店舗目以降をコード改修なしに追加できる。既存の3店舗は KNOWN_STORE_CODES を参照。
+export type StoreCode = string;
+export const KNOWN_STORE_CODES = ["kamata", "oimachi", "sugamo"] as const;
 export type PostStatus =
   | "draft"
   | "scheduled"

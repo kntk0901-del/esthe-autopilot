@@ -9,7 +9,7 @@ import {
   Send,
   Users,
 } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { endOfMonth, format, subDays, subMonths } from "date-fns";
 import { DashboardActions } from "@/components/dashboard/dashboard-actions";
 import { SalesTrendChart } from "@/components/dashboard/sales-trend-chart";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -32,9 +32,32 @@ export default async function DashboardPage() {
   const today = getJstDateString();
   const month = getJstMonthString();
   const daily = calculateStoreMetrics(data, today, today);
-  const monthly = calculateStoreMetrics(data, `${month}-01`, `${month}-31`);
+  // 月次は当月初日〜本日(month-to-date)で集計する。
+  const monthly = calculateStoreMetrics(data, `${month}-01`, today);
+  // 前月同日まで(month-to-date)と比較して、今月が前月ペースを上回っているかを示す。
+  const prevMonthDate = subMonths(new Date(`${today}T00:00:00`), 1);
+  const prevMonth = format(prevMonthDate, "yyyy-MM");
+  const prevSameDay = Math.min(
+    Number(today.slice(8, 10)),
+    endOfMonth(prevMonthDate).getDate(),
+  );
+  const prevMonthly = calculateStoreMetrics(
+    data,
+    `${prevMonth}-01`,
+    `${prevMonth}-${String(prevSameDay).padStart(2, "0")}`,
+  );
+  const prevSalesByStore = new Map(
+    prevMonthly.map((item) => [item.store.id, item.sales]),
+  );
   const todaySales = daily.reduce((sum, item) => sum + item.sales, 0);
   const monthSales = monthly.reduce((sum, item) => sum + item.sales, 0);
+  const prevMonthSales = prevMonthly.reduce((sum, item) => sum + item.sales, 0);
+  const monthOverMonth =
+    prevMonthSales > 0 ? (monthSales - prevMonthSales) / prevMonthSales : null;
+  const formatDelta = (ratio: number | null) =>
+    ratio === null
+      ? "前月比 -"
+      : `前月同日比 ${ratio >= 0 ? "+" : ""}${percentage(ratio, 1)}`;
   const todayBookings = daily.reduce((sum, item) => sum + item.bookings, 0);
   const todayShifts = data.shifts.filter((shift) => shift.shift_date === today);
   const todayPosts = data.posts.filter((post) => post.post_date === today);
@@ -78,7 +101,7 @@ export default async function DashboardPage() {
     {
       label: "月次売上",
       value: formatCurrency(monthSales),
-      detail: `目標進捗 ${percentage(monthSales / monthTarget, 1)}`,
+      detail: `目標進捗 ${percentage(monthSales / monthTarget, 1)} / ${formatDelta(monthOverMonth)}`,
       icon: ReceiptText,
       accent: "#2f7d6d",
     },
@@ -235,6 +258,11 @@ export default async function DashboardPage() {
             const shiftCount = todayShifts.filter(
               (shift) => shift.store_id === item.store.id,
             ).length;
+            const prevStoreSales = prevSalesByStore.get(item.store.id) ?? 0;
+            const storeMom =
+              prevStoreSales > 0
+                ? (item.sales - prevStoreSales) / prevStoreSales
+                : null;
             return (
               <Card key={item.store.id}>
                 <CardContent className="p-5">
@@ -281,6 +309,20 @@ export default async function DashboardPage() {
                       value={item.monthlyProgress * 100}
                       color={storeColors[index]}
                     />
+                    <p className="mt-2 text-[11px] text-[#858b86]">
+                      {storeMom === null ? (
+                        "前月データなし"
+                      ) : (
+                        <span
+                          className={
+                            storeMom >= 0 ? "text-[#2f7d6d]" : "text-[#b34839]"
+                          }
+                        >
+                          前月同日比 {storeMom >= 0 ? "+" : ""}
+                          {percentage(storeMom, 1)}
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <Link
                     href={`/stores/${item.store.code}`}

@@ -18,6 +18,24 @@ export function getJstMonthString(date: Date = new Date()): string {
   return format(toJst(date), "yyyy-MM");
 }
 
+// "YYYY-MM" から対象月の初日・末日を返す。末日は月ごとに正しく算出する。
+export function jstMonthRange(month: string): { from: string; to: string } {
+  const [year, m] = month.split("-").map(Number);
+  const lastDay = new Date(year, m, 0).getDate();
+  return {
+    from: `${month}-01`,
+    to: `${month}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+// 入力が "YYYY-MM" 形式でなければ現在のJST月にフォールバックする。
+export function resolveMonth(
+  value: string | undefined,
+  fallback: string = getJstMonthString(),
+): string {
+  return /^\d{4}-\d{2}$/.test(value ?? "") ? (value as string) : fallback;
+}
+
 export function formatJstDateTime(
   date: Date | string | null,
   pattern = "M/d HH:mm",
