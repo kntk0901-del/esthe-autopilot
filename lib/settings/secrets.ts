@@ -23,10 +23,23 @@ const envKeys: Record<IntegrationSecretKey, keyof ReturnType<typeof getEnv>> = {
 
 const secretKeys = Object.keys(envKeys) as IntegrationSecretKey[];
 
+// 店舗別に設定できる(=Xアカウントを店舗ごとに分けられる)秘密情報。
+// 保存キーは `${base}:${storeCode}` 形式(例: "xApiKey:oimachi")。
+const storeScopedBases = new Set<string>([
+  "xApiKey",
+  "xApiSecret",
+  "xAccessToken",
+  "xAccessTokenSecret",
+]);
+
+function isAllowedSecretKey(key: string): boolean {
+  if ((secretKeys as readonly string[]).includes(key)) return true;
+  const [base, storeCode] = key.split(":");
+  return Boolean(storeCode) && storeScopedBases.has(base);
+}
+
 declare global {
-  var __ESTHE_AUTOPILOT_SECRETS__:
-    | Partial<Record<IntegrationSecretKey, string>>
-    | undefined;
+  var __ESTHE_AUTOPILOT_SECRETS__: Record<string, string> | undefined;
 }
 
 function encryptionKey(): Buffer {
@@ -70,14 +83,14 @@ function decrypt(record: {
   ]).toString("utf8");
 }
 
-function envSecret(key: IntegrationSecretKey): string | null {
-  const value = getEnv()[envKeys[key]];
+function envSecret(key: string): string | null {
+  // 店舗スコープキー(base:store)にはenvフォールバックを持たない。
+  const envName = envKeys[key as IntegrationSecretKey];
+  const value = envName ? getEnv()[envName] : undefined;
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-export async function getSecretValue(
-  key: IntegrationSecretKey,
-): Promise<string | null> {
+export async function getSecretValue(key: string): Promise<string | null> {
   if (!isSupabaseConfigured()) {
     return globalThis.__ESTHE_AUTOPILOT_SECRETS__?.[key] ?? envSecret(key);
   }
@@ -90,11 +103,21 @@ export async function getSecretValue(
   return data ? decrypt(data) : envSecret(key);
 }
 
+// 店舗別の値があればそれを、無ければグローバル(全店共通)の値を返す。
+// これにより店舗ごとに別のXアカウントへ投稿できる。
+export async function getSecretValueForStore(
+  baseKey: IntegrationSecretKey,
+  storeCode: string,
+): Promise<string | null> {
+  const scoped = await getSecretValue(`${baseKey}:${storeCode}`);
+  return scoped ?? (await getSecretValue(baseKey));
+}
+
 export async function setSecretValue(
-  key: IntegrationSecretKey,
+  key: string,
   value: string,
 ): Promise<void> {
-  if (!secretKeys.includes(key)) throw new Error("Unsupported secret key");
+  if (!isAllowedSecretKey(key)) throw new Error("Unsupported secret key");
   if (!isSupabaseConfigured()) {
     globalThis.__ESTHE_AUTOPILOT_SECRETS__ ??= {};
     if (value) globalThis.__ESTHE_AUTOPILOT_SECRETS__[key] = value;

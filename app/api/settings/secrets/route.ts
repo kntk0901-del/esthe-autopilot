@@ -24,6 +24,19 @@ const schema = z.object({
 });
 
 const knownKeys = new Set<string>(keys);
+const storeScopedBases = new Set<string>([
+  "xApiKey",
+  "xApiSecret",
+  "xAccessToken",
+  "xAccessTokenSecret",
+]);
+
+// グローバルキー、または店舗別Xキー(base:storeCode)のみ許可する。
+function isAllowed(key: string): boolean {
+  if (knownKeys.has(key)) return true;
+  const [base, storeCode] = key.split(":");
+  return Boolean(storeCode) && storeScopedBases.has(base);
+}
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +44,7 @@ export async function POST(request: Request) {
     const input = schema.parse(await request.json());
     await Promise.all(
       Object.entries(input.secrets)
-        .filter(([key]) => knownKeys.has(key))
+        .filter(([key]) => isAllowed(key))
         .map(([key, value]) =>
           setSecretValue(key as IntegrationSecretKey, value),
         ),

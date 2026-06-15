@@ -14,7 +14,7 @@ export function GeneratePostControl({
   date: string;
 }) {
   const router = useRouter();
-  const [storeCode, setStoreCode] = useState(stores[0]?.code ?? "");
+  const [storeCode, setStoreCode] = useState<string>(stores[0]?.code ?? "");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 

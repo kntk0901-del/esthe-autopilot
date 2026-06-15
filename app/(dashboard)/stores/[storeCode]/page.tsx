@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CalendarClock, CircleDollarSign, Clock3, Send, Users } from "lucide-react";
 import { ActionButton } from "@/components/actions/action-button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { StoreXCredentialsForm } from "@/components/settings/store-x-credentials-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -173,6 +174,26 @@ export default async function StorePage({
             </CardContent>
           </Card>
         </div>
+      </section>
+      <section className="mt-6">
+        <Card>
+          <CardHeader>
+            <div>
+              <h2 className="font-serif text-lg font-semibold">
+                この店舗のX資格情報(任意)
+              </h2>
+              <p className="mt-1 text-xs text-[#777d78]">
+                店舗ごとに別のXアカウントへ投稿したい場合に設定
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <StoreXCredentialsForm
+              storeCode={store.code}
+              storeName={store.display_name}
+            />
+          </CardContent>
+        </Card>
       </section>
     </>
   );

@@ -3,7 +3,7 @@ import OAuth from "oauth-1.0a";
 import { AppError } from "@/lib/errors/app-error";
 import type { SocialPost, Store } from "@/lib/types";
 import type { SystemSettings } from "@/lib/types";
-import { getSecretValue } from "@/lib/settings/secrets";
+import { getSecretValueForStore } from "@/lib/settings/secrets";
 
 export interface PublishResult {
   postId: string;
@@ -11,17 +11,20 @@ export interface PublishResult {
   mediaIds: string[];
 }
 
-async function credentials() {
+async function credentials(storeCode: string) {
   return {
-    apiKey: await getSecretValue("xApiKey"),
-    apiSecret: await getSecretValue("xApiSecret"),
-    accessToken: await getSecretValue("xAccessToken"),
-    accessTokenSecret: await getSecretValue("xAccessTokenSecret"),
+    apiKey: await getSecretValueForStore("xApiKey", storeCode),
+    apiSecret: await getSecretValueForStore("xApiSecret", storeCode),
+    accessToken: await getSecretValueForStore("xAccessToken", storeCode),
+    accessTokenSecret: await getSecretValueForStore(
+      "xAccessTokenSecret",
+      storeCode,
+    ),
   };
 }
 
-async function createOAuthClient(): Promise<OAuth> {
-  const auth = await credentials();
+async function createOAuthClient(storeCode: string): Promise<OAuth> {
+  const auth = await credentials(storeCode);
   if (!auth.apiKey || !auth.apiSecret) {
     throw new AppError("X_AUTH_FAILED", "X API keyが未設定です");
   }
@@ -34,8 +37,10 @@ async function createOAuthClient(): Promise<OAuth> {
   });
 }
 
-async function token(): Promise<{ key: string; secret: string }> {
-  const auth = await credentials();
+async function token(
+  storeCode: string,
+): Promise<{ key: string; secret: string }> {
+  const auth = await credentials(storeCode);
   if (!auth.accessToken || !auth.accessTokenSecret) {
     throw new AppError("X_AUTH_FAILED", "X access tokenが未設定です");
   }
@@ -45,10 +50,13 @@ async function token(): Promise<{ key: string; secret: string }> {
 async function signedFetch(
   url: string,
   init: RequestInit & { method: string },
+  storeCode: string,
 ): Promise<Response> {
-  const oauth = await createOAuthClient();
+  const oauth = await createOAuthClient(storeCode);
   const requestData = { url, method: init.method };
-  const headers = oauth.toHeader(oauth.authorize(requestData, await token()));
+  const headers = oauth.toHeader(
+    oauth.authorize(requestData, await token(storeCode)),
+  );
   return fetch(url, {
     ...init,
     headers: { ...headers, ...init.headers },
@@ -96,6 +104,7 @@ async function uploadMedia(
   const response = await signedFetch(
     `${settings.xUploadBaseUrl}/1.1/media/upload.json`,
     { method: "POST", body: form },
+    store.code,
   );
   if (!response.ok) {
     throw new AppError(
@@ -114,17 +123,22 @@ async function createXPost(
   text: string,
   mediaIds: string[],
   settings: SystemSettings,
+  storeCode: string,
 ): Promise<{ id: string }> {
   let lastError = "";
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const response = await signedFetch(`${settings.xApiBaseUrl}/2/tweets`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        text,
-        ...(mediaIds.length > 0 ? { media: { media_ids: mediaIds } } : {}),
-      }),
-    });
+    const response = await signedFetch(
+      `${settings.xApiBaseUrl}/2/tweets`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          text,
+          ...(mediaIds.length > 0 ? { media: { media_ids: mediaIds } } : {}),
+        }),
+      },
+      storeCode,
+    );
     if (response.ok) {
       const json = (await response.json()) as { data?: { id?: string } };
       if (json.data?.id) return { id: json.data.id };
@@ -170,7 +184,12 @@ export async function publishToX(
       // Image failures intentionally degrade to fewer images or text-only.
     }
   }
-  const result = await createXPost(post.text_content, mediaIds, settings);
+  const result = await createXPost(
+    post.text_content,
+    mediaIds,
+    settings,
+    store.code,
+  );
   return {
     postId: result.id,
     postUrl: `https://x.com/${store.x_account_name?.replace("@", "") ?? "i"}/status/${result.id}`,
