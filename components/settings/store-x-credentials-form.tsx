@@ -5,11 +5,15 @@ import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// ラベルの括弧内は、X開発者ポータル(Keys and tokens)で実際に表示・発行される名称。
 const FIELDS = [
-  { base: "xApiKey", label: "X API key" },
-  { base: "xApiSecret", label: "X API secret" },
-  { base: "xAccessToken", label: "X access token" },
-  { base: "xAccessTokenSecret", label: "X access token secret" },
+  { base: "xApiKey", label: "X API key (API Key / Consumer Key)" },
+  { base: "xApiSecret", label: "X API secret (API Key Secret / Consumer Secret)" },
+  { base: "xAccessToken", label: "X access token (Access Token)" },
+  {
+    base: "xAccessTokenSecret",
+    label: "X access token secret (Access Token Secret)",
+  },
 ] as const;
 
 export function StoreXCredentialsForm({
