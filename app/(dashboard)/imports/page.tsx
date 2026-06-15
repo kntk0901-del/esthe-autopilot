@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, CheckCircle2, FileWarning } from "lucide-react";
+import { AiImport } from "@/components/imports/ai-import";
 import { ImportUploader } from "@/components/imports/import-uploader";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -47,6 +48,23 @@ export default async function ImportsPage() {
                 <span>{rule}</span>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      </section>
+      <section className="mt-6">
+        <Card>
+          <CardHeader>
+            <div>
+              <h2 className="font-serif text-lg font-semibold">
+                AIで取込(フォーマット自由・無料)
+              </h2>
+              <p className="mt-1 text-xs text-[#777d78]">
+                列構成が変わる売上表や、議事録・LINE報告などの自由文に対応。プロンプトを生成し、お使いのChatGPT/Claudeで構造化→結果を貼り戻すだけ(API不要)。
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <AiImport />
           </CardContent>
         </Card>
       </section>
