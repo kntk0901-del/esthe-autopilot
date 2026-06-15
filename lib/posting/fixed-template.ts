@@ -31,20 +31,21 @@ export function createFixedPost(input: FixedTemplateInput): string {
     .join("\n");
   const cta =
     input.includeUrl && input.trackingUrl
-      ? `詳細・ご予約はこちら\n${input.trackingUrl}`
-      : "詳細はプロフィールからご確認ください。";
+      ? `📩 詳細・ご予約はこちら\n${input.trackingUrl}`
+      : "📩 詳細はプロフィールからご確認ください。";
   const hashtags = input.store.posting_config.hashtags
     .slice(0, 3)
     .map((tag) => `#${tag.replace(/^#/, "")}`)
     .join(" ");
+  // 絵文字は検証上限(既定3)内に収める: ✨ / 🌸 / 📩 の3つ。
   return [
-    "【本日の出勤情報】",
+    "【本日の出勤情報】✨",
     "",
     input.store.display_name,
     "",
     therapistLines,
     "",
-    "本日もご予約をお待ちしております。",
+    "本日もご予約をお待ちしております🌸",
     cta,
     hashtags,
   ]

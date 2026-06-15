@@ -70,9 +70,9 @@ export async function planPost(input: {
   const includeUrl =
     (storePosts.length % 10) / 10 < input.store.posting_config.includeUrlRate;
   const id = existing?.id ?? randomUUID();
-  const trackingUrl = includeUrl
-    ? `${input.data.systemSettings.appBaseUrl.replace(/\/$/, "")}/r/x/${id}`
-    : null;
+  // 投稿には店舗の予約URL(booking_url)を直接掲載する。
+  // アプリのトラッキングURL(/r/x/...)はブランドドメインでなく見栄えが悪いため使わない。
+  const trackingUrl = includeUrl ? (input.store.booking_url ?? null) : null;
   const fallback = createFixedPost({
     store: input.store,
     shifts: selectedShifts,
