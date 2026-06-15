@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ExternalLink, Search } from "lucide-react";
+import { ExternalLink, LoaderCircle, Search, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { PostVariant, SocialPost, Store, Therapist } from "@/lib/types";
 import { formatJstDateTime } from "@/lib/dates/jst";
@@ -20,9 +21,24 @@ export function PostsTable({
   variants: PostVariant[];
   clickCounts: Record<string, number>;
 }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [store, setStore] = useState("all");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  async function handleDelete(id: string) {
+    if (!window.confirm("この投稿を削除しますか?(取り消せません)")) return;
+    setDeletingId(id);
+    try {
+      const response = await fetch(`/api/posts/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error();
+      router.refresh();
+    } catch {
+      window.alert("削除に失敗しました");
+    } finally {
+      setDeletingId(null);
+    }
+  }
   const filtered = useMemo(
     () =>
       posts.filter((post) => {
@@ -126,13 +142,28 @@ export function PostsTable({
                     {formatJstDateTime(post.created_at)}
                   </td>
                   <td className="px-5 py-4">
-                    <Link
-                      href={`/posts/${post.id}`}
-                      className="inline-flex items-center gap-1 font-semibold text-[#b64f3b] hover:underline"
-                    >
-                      詳細
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/posts/${post.id}`}
+                        className="inline-flex items-center gap-1 font-semibold text-[#b64f3b] hover:underline"
+                      >
+                        詳細
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(post.id)}
+                        disabled={deletingId === post.id}
+                        className="inline-flex items-center gap-1 text-[#9a9a9a] hover:text-[#c0392b] disabled:opacity-50"
+                        aria-label="削除"
+                      >
+                        {deletingId === post.id ? (
+                          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

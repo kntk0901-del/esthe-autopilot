@@ -51,7 +51,7 @@ const stores: Store[] = [
       timezone: "Asia/Tokyo",
     },
     posting_config: {
-      postTime: "10:00",
+      postTime: "12:00",
       includeUrlRate: 0.5,
       maxTherapists: 4,
       approvalRequired: false,
@@ -89,7 +89,7 @@ const stores: Store[] = [
       timezone: "Asia/Tokyo",
     },
     posting_config: {
-      postTime: "10:15",
+      postTime: "12:00",
       includeUrlRate: 0.5,
       maxTherapists: 4,
       approvalRequired: true,
@@ -117,7 +117,7 @@ const stores: Store[] = [
     auto_post_enabled: false,
     scraper_config: normalizeScraperConfig("sugamo", {}),
     posting_config: {
-      postTime: "10:30",
+      postTime: "12:00",
       includeUrlRate: 0.5,
       maxTherapists: 4,
       approvalRequired: false,

@@ -91,7 +91,7 @@ export function normalizePostingConfig(
   config: Partial<Store["posting_config"]> | null | undefined,
 ): Store["posting_config"] {
   return {
-    postTime: config?.postTime ?? "10:00",
+    postTime: config?.postTime ?? "12:00",
     includeUrlRate: config?.includeUrlRate ?? 0.5,
     maxTherapists: config?.maxTherapists ?? 4,
     approvalRequired: config?.approvalRequired ?? false,

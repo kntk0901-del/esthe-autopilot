@@ -1,4 +1,4 @@
-import { ActionButton } from "@/components/actions/action-button";
+import { GeneratePostControl } from "@/components/posts/generate-post-control";
 import { PostsTable } from "@/components/posts/posts-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -22,13 +22,7 @@ export default async function PostsPage() {
         eyebrow="Content Operations"
         title="投稿管理"
         description="生成根拠、掲載セラピスト、AI利用、URL・画像有無、X結果を追跡します。"
-        actions={
-          <ActionButton
-            endpoint="/api/posts/generate"
-            body={{ storeCode: "kamata", date: today, force: true }}
-            label="蒲田の投稿を生成"
-          />
-        }
+        actions={<GeneratePostControl stores={data.stores} date={today} />}
       />
       <Card className="overflow-hidden">
         <PostsTable

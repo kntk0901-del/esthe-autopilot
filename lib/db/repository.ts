@@ -242,6 +242,22 @@ export async function savePost(post: SocialPost): Promise<void> {
   }
 }
 
+export async function deletePost(id: string): Promise<void> {
+  if (isSupabaseConfigured()) {
+    const client = getSupabaseAdmin();
+    // 依存行を先に削除(post_therapistsはcascade、clicks/metricsはFK制約のため明示削除)。
+    await client.from("tracking_clicks").delete().eq("post_id", id);
+    await client.from("post_metrics").delete().eq("post_id", id);
+    const { error } = await client.from("posts").delete().eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const store = getDemoStore();
+  store.posts = store.posts.filter((item) => item.id !== id);
+  store.clicks = store.clicks.filter((item) => item.post_id !== id);
+  store.postMetrics = store.postMetrics.filter((item) => item.post_id !== id);
+}
+
 export async function saveImportBatch(batch: ImportBatch): Promise<void> {
   if (isSupabaseConfigured()) {
     const { rows, ...batchRecord } = batch;

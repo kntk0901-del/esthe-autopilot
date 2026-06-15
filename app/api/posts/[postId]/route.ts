@@ -1,4 +1,4 @@
-import { getPostById, savePost } from "@/lib/db/repository";
+import { deletePost, getPostById, savePost } from "@/lib/db/repository";
 import { requireAdmin } from "@/lib/auth/authorize";
 import { errorResponse } from "@/lib/errors/app-error";
 
@@ -29,6 +29,19 @@ export async function PATCH(
     Object.assign(post, patch, { updated_at: new Date().toISOString() });
     await savePost(post);
     return Response.json({ post });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ postId: string }> },
+) {
+  try {
+    await requireAdmin(request);
+    await deletePost((await params).postId);
+    return Response.json({ ok: true });
   } catch (error) {
     return errorResponse(error);
   }
