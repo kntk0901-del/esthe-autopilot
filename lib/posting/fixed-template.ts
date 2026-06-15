@@ -8,8 +8,14 @@ export interface FixedTemplateInput {
   trackingUrl?: string | null;
 }
 
+// DBのtime型は "HH:MM:SS" を返すことがあるため "HH:MM" に丸める。
+export function toHhmm(value: string | null): string {
+  if (!value) return "時間未定";
+  return /^\d{1,2}:\d{2}/.test(value) ? value.slice(0, 5) : value;
+}
+
 export function formatShiftRange(shift: Shift): string {
-  return `${shift.start_time ?? "時間未定"}〜${shift.end_time ?? "時間未定"}`;
+  return `${toHhmm(shift.start_time)}〜${toHhmm(shift.end_time)}`;
 }
 
 export function createFixedPost(input: FixedTemplateInput): string {

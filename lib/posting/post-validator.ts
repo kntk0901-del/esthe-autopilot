@@ -18,8 +18,32 @@ export interface PostValidationResult {
   hashtagCount: number;
 }
 
+const URL_PATTERN = /https?:\/\/[^\s]+/g;
+
+// Xのweighted length準拠でカウントする。
+// URLは一律23、CJK等の全角は2、その他は1。上限は280。
 export function countCharacters(text: string): number {
-  return Array.from(text).length;
+  const urls = text.match(URL_PATTERN) ?? [];
+  let total = urls.length * 23;
+  const rest = text.replace(URL_PATTERN, "");
+  for (const ch of rest) {
+    const code = ch.codePointAt(0) ?? 0;
+    const isWide =
+      (code >= 0x1100 && code <= 0x115f) ||
+      (code >= 0x2e80 && code <= 0x303e) ||
+      (code >= 0x3041 && code <= 0x33ff) ||
+      (code >= 0x3400 && code <= 0x4dbf) ||
+      (code >= 0x4e00 && code <= 0x9fff) ||
+      (code >= 0xa000 && code <= 0xa4cf) ||
+      (code >= 0xac00 && code <= 0xd7a3) ||
+      (code >= 0xf900 && code <= 0xfaff) ||
+      (code >= 0xfe30 && code <= 0xfe4f) ||
+      (code >= 0xff00 && code <= 0xff60) ||
+      (code >= 0xffe0 && code <= 0xffe6) ||
+      (code >= 0x20000 && code <= 0x3fffd);
+    total += isWide ? 2 : 1;
+  }
+  return total;
 }
 
 export function validatePostText(input: {
@@ -39,7 +63,7 @@ export function validatePostText(input: {
   const emojiCount =
     input.text.match(/\p{Extended_Pictographic}/gu)?.length ?? 0;
   const hashtagCount = input.text.match(/#[^\s#]+/g)?.length ?? 0;
-  if (characterCount > (input.maxChars ?? 140)) {
+  if (characterCount > (input.maxChars ?? 280)) {
     errors.push(`文字数超過: ${characterCount}`);
   }
   if (!input.text.includes(input.store.display_name)) {
@@ -62,10 +86,13 @@ export function validatePostText(input: {
       }
     });
   input.shifts.forEach((shift) => {
-    if (shift.start_time && !input.text.includes(shift.start_time)) {
+    // 本文は "HH:MM" 表記なので、DBの "HH:MM:SS" は先頭5文字で照合する。
+    const start = shift.start_time?.slice(0, 5);
+    const end = shift.end_time?.slice(0, 5);
+    if (start && !input.text.includes(start)) {
       errors.push(`${shift.therapist_raw}の開始時刻が一致しません`);
     }
-    if (shift.end_time && !input.text.includes(shift.end_time)) {
+    if (end && !input.text.includes(end)) {
       errors.push(`${shift.therapist_raw}の終了時刻が一致しません`);
     }
   });
