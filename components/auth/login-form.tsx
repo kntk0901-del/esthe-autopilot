@@ -3,32 +3,41 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LoaderCircle, Mail } from "lucide-react";
+import { LoaderCircle, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@example.com");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setPending(true);
     setMessage("");
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Supabase未設定のデモ環境では、そのままダッシュボードへ進む。
     if (!url || !key) {
       router.push("/dashboard");
       return;
     }
     const supabase = createBrowserClient(url, key);
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      password,
     });
     setPending(false);
-    setMessage(error ? error.message : "ログインリンクを送信しました");
+    if (error) {
+      setMessage("ログインに失敗しました。メールアドレスとパスワードを確認してください。");
+      return;
+    }
+    router.push("/dashboard");
+    router.refresh();
   }
+
   return (
     <form onSubmit={submit} className="space-y-4">
       <label className="block text-sm font-semibold">
@@ -40,13 +49,28 @@ export function LoginForm() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             className="h-10 w-full rounded-lg border bg-white pl-10 pr-3 font-normal"
+            autoComplete="email"
+            required
+          />
+        </span>
+      </label>
+      <label className="block text-sm font-semibold">
+        パスワード
+        <span className="relative mt-2 block">
+          <Lock className="absolute left-3 top-3 h-4 w-4 text-[#858b86]" />
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="h-10 w-full rounded-lg border bg-white pl-10 pr-3 font-normal"
+            autoComplete="current-password"
             required
           />
         </span>
       </label>
       <Button className="w-full" disabled={pending}>
         {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        メールでログイン
+        ログイン
       </Button>
       {message ? (
         <p className="rounded-lg border bg-[#f6f3ed] p-3 text-xs text-[#626862]">
