@@ -192,18 +192,19 @@ npm run import:sample
 
 ## API
 
-主要なRoute Handlers:
+画面の読み取りはServer Componentが `getAppData()` 等で直接取得します。
+以前あった読み取り専用REST(`/api/dashboard`、`/api/dashboard/monthly`、`/api/analytics/*`、および `/api/posts`・`/api/shifts`・`/api/stores`・`/api/imports` の一覧GET)は、UIから未使用の二重実装だったため廃止しました。
 
-- `GET /api/dashboard`
-- `GET/PATCH /api/stores/:storeCode`
-- `GET/POST/PATCH /api/therapists`
-- `GET /api/shifts`, `POST /api/shifts/sync`
-- `GET/POST /api/imports`, `POST /api/imports/:batchId/confirm`
-- `GET /api/posts`, `POST /api/posts/generate`
-- `POST /api/posts/:postId/approve|publish|retry|cancel`
-- `GET /api/analytics/stores|therapists|posts|variants`
-- `GET /r/x/:postId`
-- `GET /api/cron/daily`
+副作用のあるRoute Handlersと外部連携用エンドポイント:
+
+- `PATCH /api/stores/:storeCode`, `POST /api/stores/:storeCode/x-health`
+- `POST/PATCH /api/therapists`, `PATCH /api/therapists/:id`
+- `POST /api/shifts/sync`, `POST /api/shifts/manual`
+- `POST /api/imports/upload`, `POST /api/imports/ai`, `POST /api/imports/:batchId/confirm|parse`, `PATCH /api/imports/:batchId/rows/:rowId`
+- `POST /api/posts/generate`, `PATCH|DELETE /api/posts/:postId`, `POST /api/posts/:postId/approve|publish|retry|cancel`
+- `GET|PATCH /api/settings`, `POST /api/settings/secrets|scheduler`
+- `GET /r/x/:postId`(クリック計測リダイレクト)
+- `GET /api/cron/daily`, `GET|POST /api/cron/store/:storeCode`(スケジューラ)
 
 書込APIはSupabaseモードで認証とadmin roleを確認します。
 

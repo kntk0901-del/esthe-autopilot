@@ -5,12 +5,10 @@ import { KeyRound, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { IntegrationSecretKey, SecretStatus } from "@/lib/types";
 
+// X資格情報は店舗ごとに別アカウントへ投稿するため、ここ(全店共通)では扱わない。
+// X4項目は「店舗別X投稿アカウント」セクションで店舗単位に設定する。
 const fields: Array<[IntegrationSecretKey, string]> = [
   ["geminiApiKey", "Gemini API key"],
-  ["xApiKey", "X API key"],
-  ["xApiSecret", "X API secret"],
-  ["xAccessToken", "X access token"],
-  ["xAccessTokenSecret", "X access token secret"],
   ["upstashRedisUrl", "Upstash Redis URL"],
   ["upstashRedisToken", "Upstash Redis token"],
   ["qstashToken", "QStash token"],

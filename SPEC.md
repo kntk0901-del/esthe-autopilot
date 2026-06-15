@@ -1297,6 +1297,12 @@ URL有無
 therapist不明レコードは店舗集計にのみ含める
 
 21. API設計
+
+注記(2026-06実装): 画面の読み取りはServer Componentが getAppData() 等で直接行う方式に統一した。
+このため本節の読み取り専用GET(/api/dashboard, /api/dashboard/monthly, /api/analytics/*, および
+/api/posts・/api/shifts・/api/stores・/api/imports の一覧GET)はUIから未使用の二重実装となり、廃止した。
+副作用のあるエンドポイント(POST/PATCH/DELETE)とcron系、リダイレクト /r/x/:postId は現行のまま。
+
 21.1 Dashboard
 GET /api/dashboard?date=YYYY-MM-DD
 GET /api/dashboard/monthly?month=YYYY-MM

@@ -17,6 +17,22 @@ export default async function SettingsPage() {
   const storeXStatus = await getStoreScopedXStatus(
     data.stores.map((store) => store.code),
   );
+  // X資格情報は店舗別が基本。環境変数に全店共通のXが設定されていればフォールバックに使える。
+  const globalXComplete = Boolean(
+    secretStatus.xApiKey &&
+      secretStatus.xApiSecret &&
+      secretStatus.xAccessToken &&
+      secretStatus.xAccessTokenSecret,
+  );
+  const autoPostStores = data.stores.filter(
+    (store) => store.enabled && store.auto_post_enabled,
+  );
+  const storeXReady = (code: string) => storeXStatus[code] || globalXComplete;
+  const everyAutoPostStoreXReady =
+    autoPostStores.length > 0 &&
+    autoPostStores.every((store) => storeXReady(store.code));
+  const anyStoreXReady =
+    globalXComplete || Object.values(storeXStatus).some(Boolean);
   const services = [
     {
       name: "Supabase",
@@ -52,9 +68,11 @@ export default async function SettingsPage() {
     },
     {
       name: "X API",
-      ready: secretStatus.xApiKey && secretStatus.xAccessToken,
+      ready: anyStoreXReady,
       icon: KeyRound,
-      detail: data.systemSettings.xMockMode ? "Mock posting" : "Official API mode",
+      detail: data.systemSettings.xMockMode
+        ? "Mock posting"
+        : "店舗別アカウントで投稿",
     },
   ];
   // 本番稼働までの導入手順。上から順に設定していくと実運用に到達できる。
@@ -79,14 +97,9 @@ export default async function SettingsPage() {
     },
     {
       label: "実X投稿",
-      ready:
-        !data.systemSettings.xMockMode &&
-        secretStatus.xApiKey &&
-        secretStatus.xApiSecret &&
-        secretStatus.xAccessToken &&
-        secretStatus.xAccessTokenSecret,
-      detail: "XモックOFF + 4資格情報",
-      hint: "X APIの4資格情報を入力し、「分析・投稿ガード」でXモックをOFFにします。",
+      ready: !data.systemSettings.xMockMode && everyAutoPostStoreXReady,
+      detail: "XモックOFF + 自動投稿店舗のX資格情報",
+      hint: "「店舗別X投稿アカウント」で自動投稿する各店のX4資格情報を入力し、「分析・投稿ガード」でXモックをOFFにします。",
     },
     {
       label: "店舗設定",
@@ -226,9 +239,11 @@ export default async function SettingsPage() {
       <Card className="mt-6">
         <CardHeader>
           <div>
-            <h2 className="font-serif text-lg font-semibold">外部API資格情報</h2>
+            <h2 className="font-serif text-lg font-semibold">
+              外部API資格情報(全店共通)
+            </h2>
             <p className="mt-1 text-xs text-[#777d78]">
-              暗号化して保存し、画面やAPIから平文を再表示しません。Supabase基盤キーは環境変数で管理します。
+              Gemini・Upstash・QStashなど全店共通のキーを設定します。X投稿アカウントは下の「店舗別X投稿アカウント」で店舗ごとに設定します。暗号化して保存し再表示しません。Supabase基盤キーは環境変数で管理します。
             </p>
           </div>
         </CardHeader>
@@ -242,7 +257,7 @@ export default async function SettingsPage() {
             店舗別X投稿アカウント
           </h2>
           <p className="mt-1 text-xs text-[#777d78]">
-            店舗ごとに別のXアカウントへ投稿する場合に設定します。未入力の店舗は上の「外部API資格情報」の共通キーを使用します。
+            各店のX投稿アカウントの資格情報(API key/secret、access token/secret)をここで設定します。未入力の店舗は、環境変数に全店共通のX資格情報があればそれにフォールバックします。
           </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
@@ -263,7 +278,11 @@ export default async function SettingsPage() {
                   ) : null}
                 </div>
                 <Badge tone={storeXStatus[store.code] ? "success" : "neutral"}>
-                  {storeXStatus[store.code] ? "店舗専用キー" : "共通キー使用"}
+                  {storeXStatus[store.code]
+                    ? "店舗専用キー設定済み"
+                    : globalXComplete
+                      ? "環境変数を使用"
+                      : "未設定"}
                 </Badge>
               </CardHeader>
               <CardContent>
