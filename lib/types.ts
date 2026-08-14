@@ -80,6 +80,12 @@ export interface Store {
     maxTherapists: number;
     approvalRequired: boolean;
     hashtags: string[];
+    /**
+     * 投稿に画像を添付するか。既定は false(テキストのみ)。
+     * X の成人向けコンテンツ/メディアポリシー対策として、
+     * セラピストのプロフィール写真の自動添付を既定で無効化する。
+     */
+    includeImages: boolean;
     imageAllowedDomains: string[];
     accountHealthStatus: AccountHealthStatus;
     blockWhenAccountRestricted: boolean;

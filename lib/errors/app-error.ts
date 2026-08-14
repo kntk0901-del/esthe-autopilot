@@ -34,6 +34,36 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * Node(undici)の fetch は失敗時に `TypeError: fetch failed` としか言わないため、
+ * cause チェーン(ENOTFOUND / ECONNREFUSED / CERT_HAS_EXPIRED 等)まで展開し、
+ * 画面とログに原因が出るようにする。
+ */
+export function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const parts = [`${error.name}: ${error.message}`];
+  let current: unknown = error;
+  for (let depth = 0; depth < 3; depth += 1) {
+    const next =
+      (current as { cause?: unknown }).cause ??
+      (current as { errors?: unknown[] }).errors?.[0];
+    if (!(next instanceof Error)) break;
+    const code = (next as { code?: unknown }).code;
+    const hostname = (next as { hostname?: unknown }).hostname;
+    parts.push(
+      [
+        `cause: ${next.message}`,
+        code ? `code=${String(code)}` : "",
+        hostname ? `host=${String(hostname)}` : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+    current = next;
+  }
+  return parts.join(" / ");
+}
+
 export function errorResponse(error: unknown): Response {
   if (error instanceof AppError) {
     return Response.json(
@@ -41,7 +71,7 @@ export function errorResponse(error: unknown): Response {
       { status: error.code === "DUPLICATE_POST" ? 409 : 400 },
     );
   }
-  const message = error instanceof Error ? error.message : "Unknown error";
+  const message = error ? describeError(error) : "Unknown error";
   return Response.json(
     { ok: false, code: "INTERNAL_ERROR", message },
     { status: 500 },

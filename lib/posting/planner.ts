@@ -132,10 +132,14 @@ export async function planPost(input: {
     ai_raw_response: ai?.rawResponse ?? null,
     include_url: includeUrl,
     tracking_url: trackingUrl,
-    image_urls: selectedTherapists
-      .map((therapist) => therapist.profile_image_url)
-      .filter((url): url is string => Boolean(url))
-      .slice(0, 4),
+    // 画像添付は店舗設定 posting_config.includeImages が true の場合のみ。
+    // 既定 false = テキストのみ投稿(Xのメディアポリシー違反リスク回避)。
+    image_urls: input.store.posting_config.includeImages
+      ? selectedTherapists
+          .map((therapist) => therapist.profile_image_url)
+          .filter((url): url is string => Boolean(url))
+          .slice(0, 4)
+      : [],
     x_media_ids: [],
     x_post_id: null,
     x_post_url: null,

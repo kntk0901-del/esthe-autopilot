@@ -91,6 +91,9 @@ export function normalizePostingConfig(
     maxTherapists: config?.maxTherapists ?? 4,
     approvalRequired: config?.approvalRequired ?? false,
     hashtags: config?.hashtags ?? [],
+    // 既定は false: 明示的に true を設定した店舗だけ画像を添付する。
+    // 既存DBレコードに includeImages が無い場合も自動でテキストのみになる。
+    includeImages: config?.includeImages ?? false,
     imageAllowedDomains: config?.imageAllowedDomains ?? [],
     accountHealthStatus: config?.accountHealthStatus ?? "unknown",
     blockWhenAccountRestricted: config?.blockWhenAccountRestricted ?? true,

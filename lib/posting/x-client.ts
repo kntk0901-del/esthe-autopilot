@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import OAuth from "oauth-1.0a";
-import { AppError } from "@/lib/errors/app-error";
+import { AppError, describeError } from "@/lib/errors/app-error";
 import type { SocialPost, Store } from "@/lib/types";
 import type { SystemSettings } from "@/lib/types";
 import { getSecretValueForStore } from "@/lib/settings/secrets";
@@ -11,14 +11,41 @@ export interface PublishResult {
   mediaIds: string[];
 }
 
+/**
+ * 資格情報に空白・改行・全角文字が混入していると、OAuthヘッダが不正になり
+ * fetch が `TypeError: fetch failed` で落ちる(過去に env 貼り付けで再発)。
+ * 原因不明のまま落ちるのを防ぐため、送信前に検出して明示的に知らせる。
+ */
+function assertCleanSecret<T extends string | null | undefined>(
+  label: string,
+  value: T,
+): T {
+  if (typeof value === "string" && value !== "" && /[^\x21-\x7e]/.test(value)) {
+    throw new AppError(
+      "X_AUTH_FAILED",
+      `${label} に空白・改行・全角などの不正文字が含まれています。値をクリーンに再設定してください`,
+    );
+  }
+  return value;
+}
+
 async function credentials(storeCode: string) {
   return {
-    apiKey: await getSecretValueForStore("xApiKey", storeCode),
-    apiSecret: await getSecretValueForStore("xApiSecret", storeCode),
-    accessToken: await getSecretValueForStore("xAccessToken", storeCode),
-    accessTokenSecret: await getSecretValueForStore(
-      "xAccessTokenSecret",
-      storeCode,
+    apiKey: assertCleanSecret(
+      "X API Key",
+      await getSecretValueForStore("xApiKey", storeCode),
+    ),
+    apiSecret: assertCleanSecret(
+      "X API Secret",
+      await getSecretValueForStore("xApiSecret", storeCode),
+    ),
+    accessToken: assertCleanSecret(
+      "X Access Token",
+      await getSecretValueForStore("xAccessToken", storeCode),
+    ),
+    accessTokenSecret: assertCleanSecret(
+      "X Access Token Secret",
+      await getSecretValueForStore("xAccessTokenSecret", storeCode),
     ),
   };
 }
@@ -57,11 +84,20 @@ async function signedFetch(
   const headers = oauth.toHeader(
     oauth.authorize(requestData, await token(storeCode)),
   );
-  return fetch(url, {
-    ...init,
-    headers: { ...headers, ...init.headers },
-    signal: AbortSignal.timeout(20_000),
-  });
+  try {
+    return await fetch(url, {
+      ...init,
+      headers: { ...headers, ...init.headers },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (error) {
+    // ここに来るのはHTTPエラーではなくネットワーク層の失敗(DNS/TLS/タイムアウト/不正ヘッダ)。
+    // 規約違反による拒否ではないため、原因を展開して区別できるようにする。
+    throw new AppError(
+      "X_POST_FAILED",
+      `X APIへの接続に失敗しました (${init.method} ${url}): ${describeError(error)}`,
+    );
+  }
 }
 
 function validateImageUrl(url: string, store: Store): void {
@@ -168,16 +204,21 @@ export async function publishToX(
   store: Store,
   settings: SystemSettings,
 ): Promise<PublishResult> {
+  // 送信直前の最終ゲート。planner で生成済みの既存postが image_urls を
+  // 保持していても、店舗設定が false なら画像は一切添付しない。
+  const targetImageUrls = store.posting_config.includeImages
+    ? post.image_urls
+    : [];
   if (settings.xMockMode) {
     const postId = `mock-${Date.now()}`;
     return {
       postId,
       postUrl: `https://x.com/${store.x_account_name?.replace("@", "") ?? "demo"}/status/${postId}`,
-      mediaIds: post.image_urls.map((_, index) => `mock-media-${index + 1}`),
+      mediaIds: targetImageUrls.map((_, index) => `mock-media-${index + 1}`),
     };
   }
   const mediaIds: string[] = [];
-  for (const url of post.image_urls.slice(0, 4)) {
+  for (const url of targetImageUrls.slice(0, 4)) {
     try {
       mediaIds.push(await uploadMedia(url, store, settings));
     } catch {

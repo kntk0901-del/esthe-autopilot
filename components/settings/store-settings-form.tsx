@@ -23,6 +23,9 @@ export function StoreSettingsForm({ store }: { store: Store }) {
   const [hashtags, setHashtags] = useState(
     store.posting_config.hashtags.join("、"),
   );
+  const [includeImages, setIncludeImages] = useState(
+    store.posting_config.includeImages,
+  );
   const [imageDomains, setImageDomains] = useState(
     store.posting_config.imageAllowedDomains.join("\n"),
   );
@@ -70,6 +73,7 @@ export function StoreSettingsForm({ store }: { store: Store }) {
           maxTherapists: Number(maxTherapists),
           approvalRequired,
           hashtags: list(hashtags),
+          includeImages,
           imageAllowedDomains: list(imageDomains),
           accountHealthStatus: health,
           blockWhenAccountRestricted: blockRestricted,
@@ -241,6 +245,11 @@ export function StoreSettingsForm({ store }: { store: Store }) {
           className="input"
         />
       </Field>
+      <Toggle
+        label="投稿に画像を添付する（既定OFF / Xのメディアポリシー対策）"
+        checked={includeImages}
+        onChange={setIncludeImages}
+      />
       <Field label="画像取得を許可するドメイン（1行1件）">
         <textarea
           value={imageDomains}

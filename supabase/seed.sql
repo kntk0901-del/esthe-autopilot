@@ -8,20 +8,20 @@ insert into stores (
   'https://the-ritz-kamata.com/schedule/', 'https://example.com/kamata/reserve',
   '@ritz_kamata_demo', 2600000, 2, true, false,
   '{"dateTabSelector":".tl-tabs__panel","dateIdPattern":"tlsp-YYYY-MM-DD","cardSelector":".tl-schedule-card","nameSelector":".tl-schedule-card__name","timeSelector":".tl-schedule-card__time","imageSelector":"img","profileLinkSelector":".tl-schedule-card__name a","fallbackActiveTabSelector":".is-active","timezone":"Asia/Tokyo"}',
-  '{"postTime":"12:00","includeUrlRate":0.5,"maxTherapists":4,"approvalRequired":false,"hashtags":["蒲田","メンズエステ"],"imageAllowedDomains":["the-ritz-kamata.com"]}'
+  '{"postTime":"12:00","includeUrlRate":0.5,"maxTherapists":4,"approvalRequired":true,"hashtags":["蒲田","メンズエステ"],"includeImages":false,"imageAllowedDomains":["the-ritz-kamata.com"]}'
 ),
 (
   'oimachi', '大井町', 'スパラウンジ大井町',
   'https://esthe-spa-lounge.com/schedule/', 'https://example.com/oimachi/reserve',
-  '@spa_oimachi_demo', 2800000, 2, true, false,
+  '@spa_oimachi_demo', 2800000, 2, true, true,
   '{"dateTabSelector":".tl-tabs__panel","dateIdPattern":"tlsp-YYYY-MM-DD","cardSelector":".tl-schedule-card","nameSelector":".tl-schedule-card__name","timeSelector":".tl-schedule-card__time","imageSelector":"img","profileLinkSelector":".tl-schedule-card__name a","fallbackActiveTabSelector":".is-active","timezone":"Asia/Tokyo"}',
-  '{"postTime":"12:00","includeUrlRate":0.5,"maxTherapists":4,"approvalRequired":true,"hashtags":["大井町","メンズエステ"],"imageAllowedDomains":["esthe-spa-lounge.com"]}'
+  '{"postTime":"12:00","includeUrlRate":0,"maxTherapists":4,"approvalRequired":true,"hashtags":["大井町","メンズエステ"],"includeImages":false,"imageAllowedDomains":["esthe-spa-lounge.com"]}'
 ),
 (
   'sugamo', '巣鴨', '巣鴨店',
   null, 'https://example.com/sugamo/reserve',
   '@sugamo_demo', 1600000, 2, false, false, '{}',
-  '{"postTime":"12:00","includeUrlRate":0.5,"maxTherapists":4,"approvalRequired":false,"hashtags":["巣鴨","メンズエステ"],"imageAllowedDomains":[]}'
+  '{"postTime":"12:00","includeUrlRate":0.5,"maxTherapists":4,"approvalRequired":true,"hashtags":["巣鴨","メンズエステ"],"includeImages":false,"imageAllowedDomains":[]}'
 )
 on conflict (code) do update set
   canonical_name = excluded.canonical_name,
